@@ -73,13 +73,21 @@ check_requirements() {
 check_internet() {
     log_info "Checking internet connection..."
     
-    if ! ping -c 1 -W 3 8.8.8.8 &> /dev/null; then
-        log_error "No internet connection!"
-        log_info "Please check your network connection"
-        exit 1
+    # Try ping first
+    if ping -c 1 -W 3 8.8.8.8 &> /dev/null; then
+        log_success "Internet connection OK"
+        return 0
     fi
     
-    log_success "Internet connection OK"
+    # If ping fails, try curl (better for Replit environment)
+    if curl -s --max-time 5 --head https://www.facebook.com &> /dev/null; then
+        log_success "Internet connection OK (verified via HTTP)"
+        return 0
+    fi
+    
+    log_error "No internet connection!"
+    log_info "Please check your network connection"
+    exit 1
 }
 
 # ═══════════════════════════════════════════════════════════
