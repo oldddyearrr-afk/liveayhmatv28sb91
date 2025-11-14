@@ -118,12 +118,41 @@ check_stream_key() {
 
 check_source() {
     log_info "Checking source URL..."
+    log_info "Source: $SOURCE"
     
-    if ! curl -Is --max-time 10 "$SOURCE" | head -n 1 | grep -q "200\|302\|301"; then
-        log_warning "Source URL may not be valid"
-        log_info "Will attempt to stream anyway..."
+    # Try to get HTTP response
+    local http_code=$(curl -Is --max-time 10 "$SOURCE" 2>/dev/null | head -n 1 | grep -oP '\d{3}' | head -n 1)
+    
+    if [ -n "$http_code" ]; then
+        if echo "$http_code" | grep -q "200\|302\|301"; then
+            log_success "Source URL is accessible (HTTP $http_code)"
+        else
+            log_warning "Source returned HTTP $http_code"
+        fi
     else
-        log_success "Source URL is valid"
+        log_warning "Could not verify source via HTTP"
+    fi
+    
+    # Try ffprobe to check if it's a valid stream
+    log_info "Testing source with FFmpeg..."
+    if timeout 15 ffprobe -v error -select_streams v:0 -show_entries stream=codec_name -of default=noprint_wrappers=1:nokey=1 "$SOURCE" &>/dev/null; then
+        log_success "Source is a valid video stream"
+    else
+        log_error "Source does not appear to be a valid video stream!"
+        log_warning "This may cause streaming to fail"
+        echo ""
+        log_info "Common issues:"
+        echo "  - URL expired or invalid"
+        echo "  - Source requires authentication"
+        echo "  - Network/firewall blocking access"
+        echo "  - Source format not supported"
+        echo ""
+        read -p "Do you want to continue anyway? (y/n): " -n 1 -r
+        echo ""
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            log_info "Streaming cancelled by user"
+            exit 0
+        fi
     fi
 }
 
@@ -324,23 +353,52 @@ EOFSCRIPT
     done
     
     if [ "$session_started" = true ]; then
-        log_success "Stream started successfully!"
-        echo ""
-        log_info "To view stream status:"
-        echo -e "  ${GREEN}tmux attach -t $SESSION_NAME${NC}"
-        echo ""
-        log_info "Or use:"
-        echo -e "  ${GREEN}./control.sh status${NC}"
-        echo ""
-        if [ -n "$LOG_FILE" ]; then
-            log_info "Log file: $LOG_FILE"
+        # Wait a bit more and check if FFmpeg is actually running
+        sleep 3
+        
+        if tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
+            log_success "Stream started successfully!"
+            echo ""
+            log_info "To view stream status:"
+            echo -e "  ${GREEN}tmux attach -t $SESSION_NAME${NC}"
+            echo ""
+            log_info "Or use:"
+            echo -e "  ${GREEN}./control.sh status${NC}"
+            echo ""
+            if [ -n "$LOG_FILE" ]; then
+                log_info "Log file: $LOG_FILE"
+                echo ""
+                log_info "Checking initial stream output..."
+                sleep 2
+                if [ -f "$LOG_FILE" ]; then
+                    echo ""
+                    echo -e "${CYAN}═══ Last 10 lines of log ═══${NC}"
+                    tail -n 10 "$LOG_FILE"
+                    echo -e "${CYAN}════════════════════════════${NC}"
+                fi
+            fi
+            echo ""
+            log_warning "Note: If stream stops suddenly, check:"
+            echo -e "  - Stream key validity (FB_STREAM_KEY)"
+            echo -e "  - Source URL validity"
+            echo -e "  - Internet connection"
+            echo -e "  - Logs: ${GREEN}./control.sh logs${NC}"
+        else
+            log_error "Stream session died immediately after starting!"
+            echo ""
+            log_info "This usually means:"
+            echo -e "  ${YELLOW}1.${NC} Invalid stream key"
+            echo -e "  ${YELLOW}2.${NC} Invalid source URL"
+            echo -e "  ${YELLOW}3.${NC} FFmpeg encoding error"
+            echo ""
+            if [ -n "$LOG_FILE" ] && [ -f "$LOG_FILE" ]; then
+                log_info "Error details from log:"
+                echo ""
+                tail -n 30 "$LOG_FILE"
+            fi
+            rm -f "$TEMP_SCRIPT"
+            exit 1
         fi
-        echo ""
-        log_warning "Note: If stream stops suddenly, check:"
-        echo -e "  - Stream key validity (FB_STREAM_KEY)"
-        echo -e "  - Source URL validity"
-        echo -e "  - Internet connection"
-        echo -e "  - Logs: ${GREEN}./control.sh logs${NC}"
     else
         log_error "Failed to start stream!"
         echo ""
