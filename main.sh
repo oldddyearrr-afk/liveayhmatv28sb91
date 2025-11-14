@@ -189,74 +189,87 @@ fi
 # 8. Build FFmpeg parameters
 # ═══════════════════════════════════════════════════════════
 
-build_ffmpeg_params() {
-    local params=""
+build_ffmpeg_command() {
+    local input_params=""
+    local output_params=""
+    
+    # INPUT PARAMETERS (before -i)
+    # ─────────────────────────────────────────────────────────
     
     # Input format for TS streams
-    params="$params -f mpegts -analyzeduration 5000000 -probesize 5000000"
+    input_params="$input_params -f mpegts"
+    input_params="$input_params -analyzeduration 10000000"
+    input_params="$input_params -probesize 10000000"
     
     # Reconnection parameters
     if [ "$RECONNECT_ENABLED" = "true" ]; then
-        params="$params -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max $RECONNECT_DELAY_MAX"
+        input_params="$input_params -reconnect 1"
+        input_params="$input_params -reconnect_streamed 1"
+        input_params="$input_params -reconnect_delay_max $RECONNECT_DELAY_MAX"
     fi
-    
-    # Logo overlay
-    local logo_filter=$(build_logo_filter)
-    if [ -n "$logo_filter" ]; then
-        params="$params $logo_filter"
-        log_info "Logo overlay enabled"
-    fi
-    
-    # Video encoding parameters
-    params="$params -c:v $VIDEO_ENCODER"
-    
-    # libx264 specific settings with better compatibility
-    if [ "$VIDEO_ENCODER" = "libx264" ]; then
-        params="$params -preset $PRESET -tune $TUNE -profile:v main -level 4.0"
-    fi
-    
-    # Resolution and FPS
-    if [ -z "$logo_filter" ]; then
-        params="$params -vf scale=$RESOLUTION:flags=lanczos -r $FPS"
-    else
-        params="$params -r $FPS"
-    fi
-    
-    # Bitrate and buffer
-    params="$params -b:v $BITRATE -maxrate $MAXRATE -bufsize $BUFSIZE -minrate $BITRATE"
-    
-    # Key interval (2 seconds)
-    local keyint_frames=$((FPS * KEYINT))
-    params="$params -g $keyint_frames -keyint_min $keyint_frames -sc_threshold 0"
-    
-    # Pixel format
-    params="$params -pix_fmt $PIXEL_FORMAT"
-    
-    # Audio parameters
-    if [ "$AUDIO_CODEC" = "copy" ]; then
-        params="$params -c:a copy"
-        log_info "Audio: stream copy (no re-encoding)"
-    else
-        params="$params -c:a $AUDIO_CODEC -b:a $AUDIO_BITRATE -ar $AUDIO_RATE"
-        log_info "Audio: re-encoding with $AUDIO_CODEC"
-    fi
-    
-    # Threads
-    if [ "$THREADS" != "0" ]; then
-        params="$params -threads $THREADS"
-    fi
-    
-    # Output format settings for RTMP
-    params="$params -f flv -flvflags no_duration_filesize"
     
     # Log level
     if [ "$LOG_ENABLED" = "true" ]; then
-        params="$params -loglevel $LOG_LEVEL"
+        input_params="$input_params -loglevel $LOG_LEVEL"
     else
-        params="$params -loglevel info"
+        input_params="$input_params -loglevel warning"
     fi
     
-    echo "$params"
+    # OUTPUT PARAMETERS (after -i)
+    # ─────────────────────────────────────────────────────────
+    
+    # Video codec
+    output_params="$output_params -c:v $VIDEO_ENCODER"
+    
+    # Encoder-specific settings
+    if [ "$VIDEO_ENCODER" = "libx264" ]; then
+        output_params="$output_params -preset $PRESET"
+        output_params="$output_params -tune $TUNE"
+        output_params="$output_params -profile:v baseline"
+        output_params="$output_params -level 3.1"
+    fi
+    
+    # Video filters (resolution)
+    output_params="$output_params -vf scale=$RESOLUTION:flags=bicubic"
+    
+    # Frame rate
+    output_params="$output_params -r $FPS"
+    
+    # Bitrate settings
+    output_params="$output_params -b:v $BITRATE"
+    output_params="$output_params -maxrate $MAXRATE"
+    output_params="$output_params -bufsize $BUFSIZE"
+    
+    # GOP settings
+    local keyint_frames=$((FPS * KEYINT))
+    output_params="$output_params -g $keyint_frames"
+    output_params="$output_params -keyint_min $keyint_frames"
+    output_params="$output_params -sc_threshold 0"
+    
+    # Pixel format
+    output_params="$output_params -pix_fmt $PIXEL_FORMAT"
+    
+    # Audio settings
+    output_params="$output_params -c:a aac"
+    output_params="$output_params -b:a 128k"
+    output_params="$output_params -ar 44100"
+    output_params="$output_params -ac 2"
+    
+    # Threading
+    if [ "$THREADS" != "0" ]; then
+        output_params="$output_params -threads $THREADS"
+    fi
+    
+    # Output format
+    output_params="$output_params -f flv"
+    output_params="$output_params -flvflags no_duration_filesize"
+    
+    # Additional stability flags
+    output_params="$output_params -max_muxing_queue_size 1024"
+    output_params="$output_params -fflags +genpts"
+    
+    # Return both parts separated by a marker
+    echo "INPUT:$input_params OUTPUT:$output_params"
 }
 
 # ═══════════════════════════════════════════════════════════
@@ -299,8 +312,13 @@ start_stream() {
     log_info "Stopping any previous session..."
     tmux kill-session -t "$SESSION_NAME" 2>/dev/null || true
     
-    log_info "Building FFmpeg parameters..."
-    FFMPEG_PARAMS=$(build_ffmpeg_params)
+    log_info "Building FFmpeg command..."
+    local FFMPEG_CMD=$(build_ffmpeg_command)
+    
+    # Split input and output parameters
+    local INPUT_PARAMS="${FFMPEG_CMD#*INPUT:}"
+    INPUT_PARAMS="${INPUT_PARAMS%%OUTPUT:*}"
+    local OUTPUT_PARAMS="${FFMPEG_CMD#*OUTPUT:}"
     
     display_stream_info
     
@@ -328,12 +346,14 @@ EOFSCRIPT
         cat >> "$TEMP_SCRIPT" << EOFSCRIPT
 echo "Log file: $LOG_FILE"
 echo "========================================"
-ffmpeg $FFMPEG_PARAMS -i "$SOURCE" "$RTMP_URL" 2>&1 | tee -a "$LOG_FILE"
+echo "Starting FFmpeg..."
+ffmpeg $INPUT_PARAMS -i "$SOURCE" $OUTPUT_PARAMS "$RTMP_URL" 2>&1 | tee -a "$LOG_FILE"
 EOFSCRIPT
     else
         cat >> "$TEMP_SCRIPT" << EOFSCRIPT
 echo "========================================"
-ffmpeg $FFMPEG_PARAMS -i "$SOURCE" "$RTMP_URL"
+echo "Starting FFmpeg..."
+ffmpeg $INPUT_PARAMS -i "$SOURCE" $OUTPUT_PARAMS "$RTMP_URL"
 EOFSCRIPT
     fi
     
