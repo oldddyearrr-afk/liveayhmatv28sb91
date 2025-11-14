@@ -196,77 +196,49 @@ build_ffmpeg_command() {
     # INPUT PARAMETERS (before -i)
     # ─────────────────────────────────────────────────────────
     
-    # Input format for TS streams
-    input_params="$input_params -f mpegts"
-    input_params="$input_params -analyzeduration 10000000"
-    input_params="$input_params -probesize 10000000"
+    # Re-use HTTP connection for TS files
+    input_params="$input_params -multiple_requests 1"
+    input_params="$input_params -reconnect 1"
+    input_params="$input_params -reconnect_streamed 1"
+    input_params="$input_params -reconnect_at_eof 1"
+    input_params="$input_params -reconnect_delay_max 10"
     
-    # Reconnection parameters
-    if [ "$RECONNECT_ENABLED" = "true" ]; then
-        input_params="$input_params -reconnect 1"
-        input_params="$input_params -reconnect_streamed 1"
-        input_params="$input_params -reconnect_delay_max $RECONNECT_DELAY_MAX"
-    fi
+    # TS stream specific settings
+    input_params="$input_params -analyzeduration 3000000"
+    input_params="$input_params -probesize 3000000"
+    input_params="$input_params -fflags +genpts+discardcorrupt+igndts"
+    
+    # Avoid stalling
+    input_params="$input_params -timeout 10000000"
+    input_params="$input_params -rw_timeout 10000000"
     
     # Log level
-    if [ "$LOG_ENABLED" = "true" ]; then
-        input_params="$input_params -loglevel $LOG_LEVEL"
-    else
-        input_params="$input_params -loglevel warning"
-    fi
+    input_params="$input_params -loglevel info"
     
     # OUTPUT PARAMETERS (after -i)
     # ─────────────────────────────────────────────────────────
     
-    # Video codec
-    output_params="$output_params -c:v $VIDEO_ENCODER"
+    # Copy video and audio without re-encoding (fastest!)
+    output_params="$output_params -c:v copy"
+    output_params="$output_params -c:a copy"
     
-    # Encoder-specific settings
-    if [ "$VIDEO_ENCODER" = "libx264" ]; then
-        output_params="$output_params -preset $PRESET"
-        output_params="$output_params -tune $TUNE"
-        output_params="$output_params -profile:v baseline"
-        output_params="$output_params -level 3.1"
-    fi
+    # If source doesn't match FB requirements, uncomment below:
+    # output_params="$output_params -c:v $VIDEO_ENCODER"
+    # output_params="$output_params -preset veryfast -tune zerolatency"
+    # output_params="$output_params -b:v $BITRATE -maxrate $MAXRATE -bufsize $BUFSIZE"
+    # output_params="$output_params -c:a aac -b:a 128k -ar 44100"
     
-    # Video filters (resolution)
-    output_params="$output_params -vf scale=$RESOLUTION:flags=bicubic"
-    
-    # Frame rate
-    output_params="$output_params -r $FPS"
-    
-    # Bitrate settings
-    output_params="$output_params -b:v $BITRATE"
-    output_params="$output_params -maxrate $MAXRATE"
-    output_params="$output_params -bufsize $BUFSIZE"
-    
-    # GOP settings
-    local keyint_frames=$((FPS * KEYINT))
-    output_params="$output_params -g $keyint_frames"
-    output_params="$output_params -keyint_min $keyint_frames"
-    output_params="$output_params -sc_threshold 0"
-    
-    # Pixel format
-    output_params="$output_params -pix_fmt $PIXEL_FORMAT"
-    
-    # Audio settings
-    output_params="$output_params -c:a aac"
-    output_params="$output_params -b:a 128k"
-    output_params="$output_params -ar 44100"
-    output_params="$output_params -ac 2"
-    
-    # Threading
-    if [ "$THREADS" != "0" ]; then
-        output_params="$output_params -threads $THREADS"
-    fi
-    
-    # Output format
+    # Output format for RTMP/Facebook
     output_params="$output_params -f flv"
     output_params="$output_params -flvflags no_duration_filesize"
     
-    # Additional stability flags
-    output_params="$output_params -max_muxing_queue_size 1024"
-    output_params="$output_params -fflags +genpts"
+    # Sync and timing fixes
+    output_params="$output_params -async 1"
+    output_params="$output_params -vsync cfr"
+    output_params="$output_params -copytb 1"
+    
+    # Buffer settings
+    output_params="$output_params -max_muxing_queue_size 9999"
     
     # Return both parts separated by a marker
     echo "INPUT:$input_params OUTPUT:$output_params"
