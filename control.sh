@@ -2,13 +2,12 @@
 
 # ═══════════════════════════════════════════════════════════
 # Facebook Live Stream - Control Panel
-# لوحة التحكم في البث
 # ═══════════════════════════════════════════════════════════
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/config.sh" 2>/dev/null || SESSION_NAME="fbstream"
 
-# الألوان
+# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -17,35 +16,35 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 # ═══════════════════════════════════════════════════════════
-# دوال الطباعة
+# Logging functions
 # ═══════════════════════════════════════════════════════════
 
 print_header() {
     echo ""
     echo -e "${BLUE}╔════════════════════════════════════════════╗${NC}"
-    echo -e "${BLUE}║${NC}  🎥 Facebook Live Stream - لوحة التحكم  ${BLUE}║${NC}"
+    echo -e "${BLUE}║${NC}   Facebook Live Stream - Control Panel   ${BLUE}║${NC}"
     echo -e "${BLUE}╚════════════════════════════════════════════╝${NC}"
     echo ""
 }
 
 log_info() {
-    echo -e "${BLUE}ℹ️  $1${NC}"
+    echo -e "${BLUE}[INFO]${NC} $1"
 }
 
 log_success() {
-    echo -e "${GREEN}✅ $1${NC}"
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
 }
 
 log_warning() {
-    echo -e "${YELLOW}⚠️  $1${NC}"
+    echo -e "${YELLOW}[WARNING]${NC} $1"
 }
 
 log_error() {
-    echo -e "${RED}❌ $1${NC}"
+    echo -e "${RED}[ERROR]${NC} $1"
 }
 
 # ═══════════════════════════════════════════════════════════
-# فحص حالة البث
+# Get stream status
 # ═══════════════════════════════════════════════════════════
 
 get_stream_status() {
@@ -57,53 +56,53 @@ get_stream_status() {
 }
 
 # ═══════════════════════════════════════════════════════════
-# بدء البث
+# Start stream
 # ═══════════════════════════════════════════════════════════
 
 start_stream() {
     local status=$(get_stream_status)
     
     if [ "$status" = "running" ]; then
-        log_warning "البث يعمل بالفعل!"
-        log_info "استخدم 'restart' لإعادة التشغيل"
+        log_warning "Stream is already running!"
+        log_info "Use 'restart' to restart it"
         return 1
     fi
     
-    log_info "بدء البث..."
+    log_info "Starting stream..."
     bash "$SCRIPT_DIR/main.sh"
 }
 
 # ═══════════════════════════════════════════════════════════
-# إيقاف البث
+# Stop stream
 # ═══════════════════════════════════════════════════════════
 
 stop_stream() {
     local status=$(get_stream_status)
     
     if [ "$status" = "stopped" ]; then
-        log_warning "البث متوقف بالفعل"
+        log_warning "Stream is already stopped"
         return 1
     fi
     
-    log_info "إيقاف البث..."
+    log_info "Stopping stream..."
     tmux kill-session -t "$SESSION_NAME" 2>/dev/null
     
     sleep 1
     
     if [ "$(get_stream_status)" = "stopped" ]; then
-        log_success "تم إيقاف البث بنجاح"
+        log_success "Stream stopped successfully"
     else
-        log_error "فشل إيقاف البث"
+        log_error "Failed to stop stream"
         return 1
     fi
 }
 
 # ═══════════════════════════════════════════════════════════
-# إعادة تشغيل البث
+# Restart stream
 # ═══════════════════════════════════════════════════════════
 
 restart_stream() {
-    log_info "إعادة تشغيل البث..."
+    log_info "Restarting stream..."
     
     if [ "$(get_stream_status)" = "running" ]; then
         stop_stream
@@ -114,7 +113,7 @@ restart_stream() {
 }
 
 # ═══════════════════════════════════════════════════════════
-# عرض حالة البث
+# Show stream status
 # ═══════════════════════════════════════════════════════════
 
 show_status() {
@@ -122,27 +121,27 @@ show_status() {
     
     echo ""
     echo -e "${CYAN}╔════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║${NC}            📊 حالة البث الحالية           ${CYAN}║${NC}"
+    echo -e "${CYAN}║${NC}           Current Stream Status            ${CYAN}║${NC}"
     echo -e "${CYAN}╚════════════════════════════════════════════╝${NC}"
     echo ""
     
     if [ "$status" = "running" ]; then
-        echo -e "${GREEN}🟢 الحالة: يعمل (RUNNING)${NC}"
+        echo -e "${GREEN}Status: RUNNING${NC}"
         echo ""
         
         if command -v pgrep &> /dev/null && pgrep -f "ffmpeg.*$SESSION_NAME" &> /dev/null; then
             local pid=$(pgrep -f "ffmpeg.*flv" | head -1)
             if [ -n "$pid" ]; then
-                echo -e "${BLUE}🆔 Process ID:${NC} $pid"
+                echo -e "${BLUE}Process ID:${NC} $pid"
                 
                 if command -v ps &> /dev/null; then
                     local cpu=$(ps -p $pid -o %cpu --no-headers 2>/dev/null | tr -d ' ')
                     local mem=$(ps -p $pid -o %mem --no-headers 2>/dev/null | tr -d ' ')
                     local runtime=$(ps -p $pid -o etime --no-headers 2>/dev/null | tr -d ' ')
                     
-                    [ -n "$cpu" ] && echo -e "${BLUE}💻 CPU:${NC} ${cpu}%"
-                    [ -n "$mem" ] && echo -e "${BLUE}🧠 RAM:${NC} ${mem}%"
-                    [ -n "$runtime" ] && echo -e "${BLUE}⏱️  المدة:${NC} $runtime"
+                    [ -n "$cpu" ] && echo -e "${BLUE}CPU Usage:${NC} ${cpu}%"
+                    [ -n "$mem" ] && echo -e "${BLUE}RAM Usage:${NC} ${mem}%"
+                    [ -n "$runtime" ] && echo -e "${BLUE}Uptime:${NC} $runtime"
                 fi
             fi
         fi
@@ -150,19 +149,19 @@ show_status() {
         if [ -d "logs" ] && [ "$(ls -A logs 2>/dev/null)" ]; then
             local latest_log=$(ls -t logs/*.log 2>/dev/null | head -1)
             if [ -n "$latest_log" ]; then
-                echo -e "${BLUE}📄 آخر ملف سجل:${NC} $latest_log"
+                echo -e "${BLUE}Latest log:${NC} $latest_log"
             fi
         fi
         
         echo ""
-        log_info "للاطلاع على البث المباشر:"
+        log_info "To view live stream:"
         echo -e "  ${GREEN}tmux attach -t $SESSION_NAME${NC}"
-        echo -e "  ${YELLOW}(اضغط Ctrl+B ثم D للخروج بدون إيقاف)${NC}"
+        echo -e "  ${YELLOW}(Press Ctrl+B then D to detach)${NC}"
         
     else
-        echo -e "${RED}🔴 الحالة: متوقف (STOPPED)${NC}"
+        echo -e "${RED}Status: STOPPED${NC}"
         echo ""
-        log_info "لبدء البث:"
+        log_info "To start the stream:"
         echo -e "  ${GREEN}./control.sh start${NC}"
     fi
     
@@ -170,74 +169,74 @@ show_status() {
 }
 
 # ═══════════════════════════════════════════════════════════
-# عرض السجلات
+# Show logs
 # ═══════════════════════════════════════════════════════════
 
 show_logs() {
     if [ ! -d "logs" ] || [ ! "$(ls -A logs 2>/dev/null)" ]; then
-        log_warning "لا توجد سجلات بعد"
+        log_warning "No logs available yet"
         return 1
     fi
     
     local latest_log=$(ls -t logs/*.log 2>/dev/null | head -1)
     
     if [ -z "$latest_log" ]; then
-        log_warning "لا توجد سجلات"
+        log_warning "No logs found"
         return 1
     fi
     
-    log_info "عرض آخر 30 سطر من السجل..."
+    log_info "Showing last 30 lines from log..."
     echo ""
     tail -n 30 "$latest_log"
 }
 
 # ═══════════════════════════════════════════════════════════
-# الاتصال بجلسة tmux
+# Attach to tmux session
 # ═══════════════════════════════════════════════════════════
 
 attach_stream() {
     local status=$(get_stream_status)
     
     if [ "$status" = "stopped" ]; then
-        log_error "البث غير مشغل!"
-        log_info "ابدأ البث أولاً: ./control.sh start"
+        log_error "Stream is not running!"
+        log_info "Start it first: ./control.sh start"
         return 1
     fi
     
-    log_info "الاتصال بجلسة البث..."
-    log_warning "للخروج: اضغط Ctrl+B ثم D (بدون إيقاف البث)"
+    log_info "Attaching to stream session..."
+    log_warning "To detach: Press Ctrl+B then D (won't stop stream)"
     sleep 2
     tmux attach -t "$SESSION_NAME"
 }
 
 # ═══════════════════════════════════════════════════════════
-# عرض قائمة المساعدة
+# Show help
 # ═══════════════════════════════════════════════════════════
 
 show_help() {
     print_header
-    echo -e "${CYAN}الاستخدام:${NC}"
+    echo -e "${CYAN}Usage:${NC}"
     echo -e "  ./control.sh ${GREEN}[command]${NC}"
     echo ""
-    echo -e "${CYAN}الأوامر المتاحة:${NC}"
+    echo -e "${CYAN}Available Commands:${NC}"
     echo ""
-    echo -e "  ${GREEN}start${NC}        - بدء البث"
-    echo -e "  ${GREEN}stop${NC}         - إيقاف البث"
-    echo -e "  ${GREEN}restart${NC}      - إعادة تشغيل البث"
-    echo -e "  ${GREEN}status${NC}       - عرض حالة البث"
-    echo -e "  ${GREEN}logs${NC}         - عرض السجلات"
-    echo -e "  ${GREEN}attach${NC}       - الاتصال بجلسة البث"
-    echo -e "  ${GREEN}help${NC}         - عرض هذه المساعدة"
+    echo -e "  ${GREEN}start${NC}        - Start streaming"
+    echo -e "  ${GREEN}stop${NC}         - Stop streaming"
+    echo -e "  ${GREEN}restart${NC}      - Restart streaming"
+    echo -e "  ${GREEN}status${NC}       - Show stream status"
+    echo -e "  ${GREEN}logs${NC}         - Show log files"
+    echo -e "  ${GREEN}attach${NC}       - Attach to stream session"
+    echo -e "  ${GREEN}help${NC}         - Show this help"
     echo ""
-    echo -e "${CYAN}أمثلة:${NC}"
-    echo -e "  ./control.sh start       ${BLUE}# بدء البث${NC}"
-    echo -e "  ./control.sh status      ${BLUE}# معرفة الحالة${NC}"
-    echo -e "  ./control.sh logs        ${BLUE}# قراءة السجلات${NC}"
+    echo -e "${CYAN}Examples:${NC}"
+    echo -e "  ./control.sh start       ${BLUE}# Start streaming${NC}"
+    echo -e "  ./control.sh status      ${BLUE}# Check status${NC}"
+    echo -e "  ./control.sh logs        ${BLUE}# View logs${NC}"
     echo ""
 }
 
 # ═══════════════════════════════════════════════════════════
-# القائمة التفاعلية
+# Interactive menu
 # ═══════════════════════════════════════════════════════════
 
 interactive_menu() {
@@ -246,39 +245,39 @@ interactive_menu() {
         
         local status=$(get_stream_status)
         if [ "$status" = "running" ]; then
-            echo -e "${GREEN}🟢 الحالة: يعمل${NC}"
+            echo -e "${GREEN}Status: RUNNING${NC}"
         else
-            echo -e "${RED}🔴 الحالة: متوقف${NC}"
+            echo -e "${RED}Status: STOPPED${NC}"
         fi
         
         echo ""
-        echo -e "${CYAN}اختر عملية:${NC}"
+        echo -e "${CYAN}Select an option:${NC}"
         echo ""
-        echo "  1) بدء البث (Start)"
-        echo "  2) إيقاف البث (Stop)"
-        echo "  3) إعادة التشغيل (Restart)"
-        echo "  4) عرض الحالة (Status)"
-        echo "  5) عرض السجلات (Logs)"
-        echo "  6) الاتصال بالبث (Attach)"
-        echo "  0) خروج (Exit)"
+        echo "  1) Start Stream"
+        echo "  2) Stop Stream"
+        echo "  3) Restart Stream"
+        echo "  4) Show Status"
+        echo "  5) Show Logs"
+        echo "  6) Attach to Stream"
+        echo "  0) Exit"
         echo ""
-        read -p "اختيارك: " choice
+        read -p "Your choice: " choice
         
         case $choice in
-            1) start_stream; read -p "اضغط Enter للمتابعة..." ;;
-            2) stop_stream; read -p "اضغط Enter للمتابعة..." ;;
-            3) restart_stream; read -p "اضغط Enter للمتابعة..." ;;
-            4) show_status; read -p "اضغط Enter للمتابعة..." ;;
-            5) show_logs; read -p "اضغط Enter للمتابعة..." ;;
+            1) start_stream; read -p "Press Enter to continue..." ;;
+            2) stop_stream; read -p "Press Enter to continue..." ;;
+            3) restart_stream; read -p "Press Enter to continue..." ;;
+            4) show_status; read -p "Press Enter to continue..." ;;
+            5) show_logs; read -p "Press Enter to continue..." ;;
             6) attach_stream ;;
-            0) log_info "مع السلامة! 👋"; exit 0 ;;
-            *) log_error "خيار غير صحيح"; sleep 1 ;;
+            0) log_info "Goodbye!"; exit 0 ;;
+            *) log_error "Invalid option"; sleep 1 ;;
         esac
     done
 }
 
 # ═══════════════════════════════════════════════════════════
-# البرنامج الرئيسي
+# Main program
 # ═══════════════════════════════════════════════════════════
 
 main() {
@@ -313,7 +312,7 @@ main() {
             interactive_menu
             ;;
         *)
-            log_error "أمر غير معروف: $1"
+            log_error "Unknown command: $1"
             echo ""
             show_help
             exit 1

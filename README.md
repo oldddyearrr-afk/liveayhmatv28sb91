@@ -1,206 +1,286 @@
-# 🎥 Facebook Live Stream - البث المباشر على فيسبوك
+# 🎥 Facebook Live Stream
 
-مشروع محسّن للبث المباشر على فيسبوك باستخدام FFmpeg مع ميزات متقدمة.
+Enhanced Facebook Live streaming using FFmpeg with advanced features.
 
-## ✨ المميزات
+## ✨ Features
 
-- ✅ **إعدادات 1080p محسّنة**: 5000kbps، 30fps، key interval 2s
-- ✅ **جودات متعددة**: Low, Medium, High, Ultra
-- ✅ **معالجة أخطاء ذكية**: فحص الإنترنت والمصدر تلقائياً
-- ✅ **لوحة تحكم سهلة**: أوامر بسيطة لإدارة البث
-- ✅ **تسريع GPU**: دعم NVIDIA, Intel, AMD
-- ✅ **أمان محسّن**: مفتاح البث في متغيرات بيئة آمنة
-- ✅ **سجلات متقدمة**: تسجيل كامل لكل عملية بث
-- ✅ **إعادة اتصال تلقائي**: في حال انقطاع الإنترنت
+- ✅ **Optimized 1080p Settings**: 5000kbps, 30fps, 2s key interval
+- ✅ **Multiple Quality Presets**: Low, Medium, High, Ultra
+- ✅ **Smart Error Handling**: Auto-check internet, source, and keys
+- ✅ **Easy Control Panel**: Simple commands to manage streaming
+- ✅ **GPU Acceleration**: Support for NVIDIA, Intel, AMD
+- ✅ **Enhanced Security**: Stream key in environment variables
+- ✅ **Advanced Logging**: Complete logging for each stream session
+- ✅ **Auto Reconnect**: Reconnects automatically on internet drop
+- ✅ **Audio Stream Copy**: Copy audio directly from source (faster, no re-encoding)
+- ✅ **Logo Overlay**: Add watermark/logo to your stream
 
-## 🚀 البدء السريع
+## 🚀 Quick Start
 
-### 1. الإعداد الأولي
+### 1. Initial Setup
 
 ```bash
-# انسخ ملف الإعدادات
+# Copy example config
 cp .env.example .env
 
-# افتح .env وضع مفتاح البث الخاص بك
+# Edit .env and add your stream key
 nano .env
 ```
 
-### 2. احصل على مفتاح البث من فيسبوك
+### 2. Get Stream Key from Facebook
 
-1. اذهب إلى: https://www.facebook.com/live/producer
-2. اختر "Go Live"
-3. انسخ "Stream Key"
-4. ضعه في ملف `.env`:
+1. Go to: https://www.facebook.com/live/producer
+2. Select "Go Live"
+3. Copy "Stream Key"
+4. Put it in `.env`:
 
 ```
 FB_STREAM_KEY=your-actual-stream-key-here
 ```
 
-### 3. شغّل البث
+### 3. Start Streaming
 
 ```bash
-# الطريقة الأولى: استخدام لوحة التحكم (موصى به)
+# Method 1: Using control panel (recommended)
 ./control.sh
 
-# الطريقة الثانية: بدء مباشر
+# Method 2: Direct start
 ./main.sh
 ```
 
-## 📋 استخدام لوحة التحكم
+## 📋 Using Control Panel
 
 ```bash
-# عرض القائمة التفاعلية
+# Show interactive menu
 ./control.sh
 
-# أو استخدم الأوامر المباشرة:
-./control.sh start      # بدء البث
-./control.sh stop       # إيقاف البث
-./control.sh restart    # إعادة التشغيل
-./control.sh status     # معرفة الحالة
-./control.sh logs       # عرض السجلات
-./control.sh attach     # الاتصال بجلسة البث
+# Or use direct commands:
+./control.sh start      # Start streaming
+./control.sh stop       # Stop streaming
+./control.sh restart    # Restart streaming
+./control.sh status     # Check status
+./control.sh logs       # View logs
+./control.sh attach     # Attach to stream session
 ```
 
-## ⚙️ تخصيص الإعدادات
+## ⚙️ Configuration
 
-### تغيير الجودة
+### Change Quality
 
-افتح `config.sh` وعدّل:
+Edit `config.sh`:
 
 ```bash
-# اختر: low, medium, high, ultra, custom
+# Choose: low, medium, high, ultra, custom
 QUALITY_MODE="ultra"
 ```
 
-### إعدادات مخصصة
+### Audio Settings
+
+By default, audio is copied from source (faster):
 
 ```bash
-# في config.sh - قسم CUSTOM
+# In config.sh
+AUDIO_CODEC="copy"  # Stream copy (no re-encoding)
+# Or
+AUDIO_CODEC="aac"   # Re-encode audio
+```
+
+### Add Logo/Watermark
+
+Edit `config.sh`:
+
+```bash
+# Enable logo
+LOGO_ENABLED="true"
+
+# Set logo file path (PNG with transparency recommended)
+LOGO_PATH="logo.png"
+
+# Position: topleft, topright, bottomleft, bottomright
+LOGO_POSITION="topright"
+
+# Offset from edges (pixels)
+LOGO_OFFSET_X="10"
+LOGO_OFFSET_Y="10"
+
+# Size (WxH, leave empty for original size)
+LOGO_SIZE=""  # Example: "200:100"
+
+# Opacity (0.0 to 1.0)
+LOGO_OPACITY="1.0"
+```
+
+### Change Video Source
+
+```bash
+# In config.sh
+SOURCE="https://your-stream-url.m3u8"
+```
+
+### Custom Settings
+
+```bash
+# In config.sh - CUSTOM section
 CUSTOM_RESOLUTION="1920x1080"
 CUSTOM_FPS="30"
 CUSTOM_BITRATE="5000k"
 CUSTOM_MAXRATE="6000k"
-CUSTOM_KEYINT="2"  # Key interval بالثواني
+CUSTOM_KEYINT="2"  # Key interval in seconds
 ```
 
-### تغيير مصدر الفيديو
+## 🎮 Available Quality Modes
 
-```bash
-# في config.sh
-SOURCE="https://your-stream-url.m3u8"
-```
+| Mode | Resolution | FPS | Bitrate | Use Case |
+|------|-----------|-----|---------|----------|
+| Low | 720p | 30 | 2000k | Weak internet |
+| Medium | 720p | 30 | 3000k | Medium quality |
+| High | 1080p | 30 | 4500k | High quality |
+| **Ultra** | **1080p** | **30** | **5000k** | **Best quality** ⭐ |
+| Custom | Custom | Custom | Custom | Your settings |
 
-## 🎮 الجودات المتوفرة
+## 🛡️ Security Features
 
-| الوضع | الدقة | FPS | Bitrate | الاستخدام |
-|------|-------|-----|---------|-----------|
-| Low | 720p | 30 | 2000k | إنترنت ضعيف |
-| Medium | 720p | 30 | 3000k | جودة متوسطة |
-| High | 1080p | 30 | 4500k | جودة عالية |
-| **Ultra** | **1080p** | **30** | **5000k** | **أفضل جودة** ⭐ |
-| Custom | مخصص | مخصص | مخصص | حسب رغبتك |
+- ✅ Stream key in environment variables (not in code)
+- ✅ `.env` file protected from Git
+- ✅ No secret logging
+- ✅ Separate config from code
 
-## 🛡️ ميزات الأمان
+## 📊 Monitor Streaming
 
-- ✅ مفتاح البث في متغيرات البيئة (لا يظهر في الكود)
-- ✅ ملف `.env` محمي من Git
-- ✅ لا تسجيل للمفاتيح السرية في السجلات
-
-## 📊 مراقبة البث
-
-### عرض الحالة
+### View Status
 
 ```bash
 ./control.sh status
 ```
 
-يعرض:
-- حالة البث (نشط/متوقف)
-- استهلاك CPU و RAM
-- مدة التشغيل
-- موقع ملفات السجل
+Shows:
+- Stream status (running/stopped)
+- CPU & RAM usage
+- Uptime
+- Log file location
 
-### الاتصال بالبث المباشر
+### Attach to Live Stream
 
 ```bash
 ./control.sh attach
 
-# للخروج بدون إيقاف البث:
-# اضغط: Ctrl+B ثم D
+# To detach without stopping:
+# Press: Ctrl+B then D
 ```
 
-### قراءة السجلات
+### Read Logs
 
 ```bash
-# آخر 30 سطر
+# Last 30 lines
 ./control.sh logs
 
-# أو اقرأ الملف كاملاً
+# Or read full file
 cat logs/stream_*.log
 ```
 
-## 🚨 معالجة الأخطاء
+## 🚨 Error Handling
 
-المشروع يفحص تلقائياً:
+The project automatically checks:
 
-1. ✅ تثبيت FFmpeg و tmux
-2. ✅ الاتصال بالإنترنت
-3. ✅ وجود مفتاح البث
-4. ✅ صحة رابط المصدر
+1. ✅ FFmpeg & tmux installation
+2. ✅ Internet connection
+3. ✅ Stream key presence
+4. ✅ Source URL validity
 
-إذا حدث خطأ، ستحصل على رسالة واضحة تشرح المشكلة.
+If an error occurs, you'll get a clear message explaining the issue.
 
-## 💻 تحسينات الأداء
+## 💻 Performance Optimizations
 
-### استخدام GPU (إن وجد)
+### GPU Usage (if available)
 
-يكتشف المشروع تلقائياً:
+Auto-detects:
 - NVIDIA GPU (h264_nvenc)
 - Intel GPU (h264_vaapi, h264_qsv)
 - AMD GPU (h264_amf)
 
-للتحكم اليدوي في `config.sh`:
+Manual control in `config.sh`:
 
 ```bash
-USE_GPU="auto"    # تلقائي (موصى به)
-USE_GPU="nvidia"  # فقط NVIDIA
-USE_GPU="off"     # استخدام CPU فقط
+USE_GPU="auto"    # Auto-detect (recommended)
+USE_GPU="nvidia"  # NVIDIA only
+USE_GPU="off"     # CPU only
 ```
 
-## 📁 بنية المشروع
+### Audio Stream Copy
+
+By default, audio is copied directly from source:
+- ✅ Faster processing
+- ✅ No quality loss
+- ✅ Lower CPU usage
+- ✅ Preserves original audio codec
+
+## 📁 Project Structure
 
 ```
 .
-├── main.sh          # السكريبت الرئيسي للبث
-├── config.sh        # ملف الإعدادات
-├── control.sh       # لوحة التحكم
-├── .env             # متغيرات البيئة (السري)
-├── .env.example     # مثال على الإعدادات
-├── logs/            # مجلد السجلات
-└── README.md        # هذا الملف
+├── main.sh          # Main streaming script
+├── config.sh        # Configuration file
+├── control.sh       # Control panel
+├── .env             # Environment variables (secret)
+├── .env.example     # Example config
+├── logs/            # Log files directory
+└── README.md        # This file
 ```
 
-## 🔧 متطلبات النظام
+## 🔧 System Requirements
 
-- ✅ FFmpeg (مثبت تلقائياً)
-- ✅ tmux (مثبت تلقائياً)
+- ✅ FFmpeg (installed automatically)
+- ✅ tmux (installed automatically)
 - ✅ Bash 4.0+
-- ✅ اتصال إنترنت مستقر
+- ✅ Stable internet connection
 
-## 📝 ملاحظات مهمة
+## 📝 Important Notes
 
-1. **لا تشارك مفتاح البث**: ملف `.env` محمي ولا يجب مشاركته
-2. **الإعدادات الحالية**: الوضع Ultra (1080p, 5000kbps, 30fps)
-3. **Key Interval**: 2 ثانية (مناسب للبث المباشر)
-4. **إعادة الاتصال**: تلقائياً في حال انقطاع الإنترنت
+1. **Don't share stream key**: `.env` file is protected and shouldn't be shared
+2. **Current settings**: Ultra mode (1080p, 5000kbps, 30fps)
+3. **Key interval**: 2 seconds (optimal for live streaming)
+4. **Auto reconnect**: Automatically reconnects on internet drop
+5. **Audio**: Stream copy by default (no re-encoding)
 
-## 🆘 المساعدة
+## 🆘 Help
 
 ```bash
-# عرض قائمة المساعدة
+# Show help
 ./control.sh help
 ```
 
-## 📄 الترخيص
+## 📖 Examples
 
-مفتوح المصدر - استخدمه كما تشاء! 🎉
+### Basic Streaming
+
+```bash
+# Start stream
+./control.sh start
+
+# Check if running
+./control.sh status
+
+# Stop stream
+./control.sh stop
+```
+
+### With Logo
+
+1. Place your logo file (PNG recommended): `logo.png`
+2. Edit `config.sh`:
+   ```bash
+   LOGO_ENABLED="true"
+   LOGO_PATH="logo.png"
+   LOGO_POSITION="topright"
+   ```
+3. Start stream: `./control.sh start`
+
+### Change Quality on the Fly
+
+1. Stop current stream: `./control.sh stop`
+2. Edit `config.sh`: `QUALITY_MODE="high"`
+3. Restart: `./control.sh start`
+
+## 📄 License
+
+Open source - use it as you wish! 🎉

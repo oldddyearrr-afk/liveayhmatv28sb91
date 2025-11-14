@@ -1,12 +1,12 @@
-# 🎥 مشروع البث المباشر على فيسبوك
+# 🎥 Facebook Live Stream Project
 
-## نظرة عامة
-مشروع محسّن للبث المباشر على فيسبوك باستخدام FFmpeg و tmux مع ميزات متقدمة لمعالجة الأخطاء والأداء العالي.
+## Overview
+Enhanced Facebook Live streaming project using FFmpeg and tmux with advanced features for error handling and high performance.
 
-## التقنيات المستخدمة
-- **Bash**: لغة البرمجة الأساسية
-- **FFmpeg 6.1.1**: لمعالجة الفيديو والبث
-- **tmux 3.4**: لإدارة الجلسة في الخلفية
+## Technologies Used
+- **Bash**: Main programming language
+- **FFmpeg 6.1.1**: Video processing and streaming
+- **tmux 3.4**: Background session management
 
 ## بنية المشروع
 ```
@@ -20,57 +20,64 @@
 └── README.md        - دليل الاستخدام الكامل
 ```
 
-## الميزات المحسّنة
+## Enhanced Features
 
-### 1. إعدادات الجودة (1080p Ultra)
-- **الدقة**: 1920x1080 (Full HD)
-- **FPS**: 30 إطار/ثانية
+### 1. Quality Settings (1080p Ultra)
+- **Resolution**: 1920x1080 (Full HD)
+- **FPS**: 30 frames/second
 - **Bitrate**: 5000 kbps (adaptive)
-- **Key Interval**: 2 ثانية (للبث المباشر)
-- **الصوت**: AAC 192kbps @ 44.1kHz
+- **Key Interval**: 2 seconds (for live streaming)
+- **Audio**: Stream copy from source (no re-encoding)
 
-### 2. جودات متعددة
-- **Low**: 720p @ 2000kbps (إنترنت ضعيف)
-- **Medium**: 720p @ 3000kbps (جودة متوسطة)
-- **High**: 1080p @ 4500kbps (جودة عالية)
-- **Ultra**: 1080p @ 5000kbps (أفضل جودة) ⭐
-- **Custom**: إعدادات مخصصة
+### 2. Multiple Quality Modes
+- **Low**: 720p @ 2000kbps (weak internet)
+- **Medium**: 720p @ 3000kbps (medium quality)
+- **High**: 1080p @ 4500kbps (high quality)
+- **Ultra**: 1080p @ 5000kbps (best quality) ⭐
+- **Custom**: Custom settings
 
-### 3. معالجة الأخطاء الذكية
-- ✅ فحص تثبيت FFmpeg و tmux
-- ✅ فحص الاتصال بالإنترنت
-- ✅ التحقق من مفتاح البث
-- ✅ التحقق من صحة رابط المصدر
-- ✅ إعادة اتصال تلقائي عند الانقطاع
+### 3. Smart Error Handling
+- ✅ Check FFmpeg & tmux installation
+- ✅ Check internet connection
+- ✅ Verify stream key
+- ✅ Validate source URL
+- ✅ Auto-reconnect on drop
 
-### 4. لوحة التحكم السهلة
+### 4. Easy Control Panel
 ```bash
-./control.sh          # قائمة تفاعلية
-./control.sh start    # بدء البث
-./control.sh stop     # إيقاف البث
-./control.sh restart  # إعادة التشغيل
-./control.sh status   # عرض الحالة
-./control.sh logs     # السجلات
-./control.sh attach   # الاتصال بالبث
+./control.sh          # Interactive menu
+./control.sh start    # Start streaming
+./control.sh stop     # Stop streaming
+./control.sh restart  # Restart
+./control.sh status   # Show status
+./control.sh logs     # View logs
+./control.sh attach   # Attach to stream
 ```
 
-### 5. تحسينات الأداء
-- دعم GPU Encoding (NVIDIA, Intel, AMD)
-- كشف تلقائي للـ GPU المتوفر
-- تقليل استهلاك CPU
-- Buffer محسّن لتجنب التقطيع
+### 5. Performance Optimizations
+- GPU Encoding support (NVIDIA, Intel, AMD)
+- Auto-detect available GPU
+- Reduced CPU usage
+- Optimized buffer to avoid stuttering
+- Audio stream copy (no re-encoding)
 
-### 6. ميزات الأمان
-- مفتاح البث في متغيرات البيئة (`.env`)
-- ملف `.env` محمي من Git
-- لا تسجيل للمفاتيح السرية
-- فصل الإعدادات عن الكود
+### 6. Security Features
+- Stream key in environment variables (`.env`)
+- `.env` file protected from Git
+- No secret logging
+- Config separated from code
 
-### 7. نظام السجلات
-- تسجيل تلقائي لكل عملية بث
-- ملفات منفصلة بالتاريخ والوقت
-- تتبع الأخطاء والتحذيرات
-- سهولة المراجعة والتحليل
+### 7. Logging System
+- Auto-logging for each stream session
+- Separate files with timestamp
+- Track errors and warnings
+- Easy review and analysis
+
+### 8. Logo/Watermark Support
+- Add PNG logo to stream
+- Position: topleft, topright, bottomleft, bottomright
+- Adjustable size and opacity
+- Customizable offset from edges
 
 ## كيفية الاستخدام
 
@@ -103,13 +110,15 @@ QUALITY_MODE="ultra"  # low, medium, high, ultra, custom
 SOURCE="https://your-stream-url.m3u8"
 ```
 
-## الإعدادات الحالية
-- **الجودة**: Ultra (1080p)
+## Current Settings
+- **Quality**: Ultra (1080p)
 - **Bitrate**: 5000 kbps
 - **FPS**: 30
 - **Key Interval**: 2s
-- **إعادة الاتصال**: تلقائي
-- **GPU**: كشف تلقائي
+- **Auto Reconnect**: Enabled
+- **GPU**: Auto-detect
+- **Audio**: Stream copy (no re-encoding)
+- **Logo**: Disabled by default
 
 ## المتطلبات
 - ✅ FFmpeg 6.1.1 (مثبت)
@@ -118,19 +127,23 @@ SOURCE="https://your-stream-url.m3u8"
 - ✅ اتصال إنترنت مستقر
 - ✅ مفتاح بث فيسبوك
 
-## آخر التعديلات
-- **14 نوفمبر 2025**:
-  - ✅ تطبيق إعدادات 1080p الجديدة (5000kbps, 30fps, 2s keyframe)
-  - ✅ إنشاء config.sh بجودات متعددة
-  - ✅ إضافة معالجة أخطاء ذكية شاملة
-  - ✅ إنشاء control.sh للتحكم السهل
-  - ✅ تحسينات الأداء مع دعم GPU
-  - ✅ نظام أمان محسّن بمتغيرات البيئة
-  - ✅ نظام سجلات متقدم
-  - ✅ إنشاء README.md شامل
+## Latest Changes
+- **November 14, 2025**:
+  - ✅ Applied new 1080p settings (5000kbps, 30fps, 2s keyframe)
+  - ✅ Created config.sh with multiple quality modes
+  - ✅ Added comprehensive smart error handling
+  - ✅ Created control.sh for easy control
+  - ✅ Performance optimizations with GPU support
+  - ✅ Enhanced security with environment variables
+  - ✅ Advanced logging system
+  - ✅ Created comprehensive README.md
+  - ✅ Changed console output to English
+  - ✅ Added audio stream copy (no re-encoding)
+  - ✅ Added logo/watermark overlay support
 
-## تفضيلات المستخدم
-- استخدام اللغة العربية في التواصل
-- التركيز على البساطة والسرعة
-- تجنب المشاكل والأخطاء
-- جودة عالية للبث (1080p)
+## User Preferences
+- Console output in English (better compatibility)
+- Focus on simplicity and speed
+- Avoid errors and issues
+- High quality streaming (1080p)
+- Audio stream copy for better performance

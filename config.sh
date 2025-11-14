@@ -1,28 +1,28 @@
 #!/bin/bash
 
 # ═══════════════════════════════════════════════════════════
-# ملف الإعدادات - Facebook Live Stream Configuration
+# Configuration File - Facebook Live Stream
 # ═══════════════════════════════════════════════════════════
 
 # ═══════════════════════════════════════════════════════════
-# 1. إعدادات المصدر والوجهة
+# 1. Source and Destination Settings
 # ═══════════════════════════════════════════════════════════
 
-# رابط مصدر الفيديو M3U8
+# M3U8 video source URL
 SOURCE="https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
 
-# رابط RTMP لفيسبوك (يتم جلب Stream Key من متغيرات البيئة للأمان)
+# RTMP server for Facebook (Stream Key is fetched from environment variables for security)
 RTMP_SERVER="rtmp://rtmp-api.facebook.com:80/rtmp/"
 
 # ═══════════════════════════════════════════════════════════
-# 2. إعدادات الجودة المختلفة (Quality Presets)
+# 2. Quality Presets
 # ═══════════════════════════════════════════════════════════
 
-# اختر أحد الأوضاع: low, medium, high, ultra, custom
+# Choose one: low, medium, high, ultra, custom
 QUALITY_MODE="ultra"
 
 # ─────────────────────────────────────────────────────────
-# وضع LOW - 720p @ 30fps (للإنترنت الضعيف)
+# LOW Mode - 720p @ 30fps (for weak internet)
 # ─────────────────────────────────────────────────────────
 LOW_RESOLUTION="1280x720"
 LOW_FPS="30"
@@ -32,7 +32,7 @@ LOW_BUFSIZE="4000k"
 LOW_AUDIO_BITRATE="96k"
 
 # ─────────────────────────────────────────────────────────
-# وضع MEDIUM - 720p @ 30fps (جودة متوسطة)
+# MEDIUM Mode - 720p @ 30fps (medium quality)
 # ─────────────────────────────────────────────────────────
 MEDIUM_RESOLUTION="1280x720"
 MEDIUM_FPS="30"
@@ -42,7 +42,7 @@ MEDIUM_BUFSIZE="6000k"
 MEDIUM_AUDIO_BITRATE="128k"
 
 # ─────────────────────────────────────────────────────────
-# وضع HIGH - 1080p @ 30fps (جودة عالية)
+# HIGH Mode - 1080p @ 30fps (high quality)
 # ─────────────────────────────────────────────────────────
 HIGH_RESOLUTION="1920x1080"
 HIGH_FPS="30"
@@ -52,7 +52,7 @@ HIGH_BUFSIZE="9000k"
 HIGH_AUDIO_BITRATE="160k"
 
 # ─────────────────────────────────────────────────────────
-# وضع ULTRA - 1080p @ 30fps (أفضل جودة) ⭐ الإعدادات الجديدة
+# ULTRA Mode - 1080p @ 30fps (best quality) ⭐ New Settings
 # ─────────────────────────────────────────────────────────
 ULTRA_RESOLUTION="1920x1080"
 ULTRA_FPS="30"
@@ -63,7 +63,7 @@ ULTRA_AUDIO_BITRATE="192k"
 ULTRA_KEYINT="2"  # Key interval 2 seconds
 
 # ─────────────────────────────────────────────────────────
-# وضع CUSTOM - إعدادات مخصصة
+# CUSTOM Mode - Custom settings
 # ─────────────────────────────────────────────────────────
 CUSTOM_RESOLUTION="1920x1080"
 CUSTOM_FPS="30"
@@ -74,41 +74,64 @@ CUSTOM_AUDIO_BITRATE="192k"
 CUSTOM_KEYINT="2"
 
 # ═══════════════════════════════════════════════════════════
-# 3. إعدادات متقدمة
+# 3. Advanced Settings
 # ═══════════════════════════════════════════════════════════
 
-# إعادة الاتصال التلقائي
+# Auto reconnect settings
 RECONNECT_ENABLED="true"
 RECONNECT_DELAY_MAX="10"
-RECONNECT_ATTEMPTS="-1"  # -1 = محاولات غير محدودة
+RECONNECT_ATTEMPTS="-1"  # -1 = unlimited attempts
 
-# إعدادات الترميز
+# Encoding settings
 PRESET="veryfast"  # ultrafast, superfast, veryfast, faster, fast, medium, slow
-TUNE="zerolatency"  # للبث المباشر
+TUNE="zerolatency"  # For live streaming
 PIXEL_FORMAT="yuv420p"
 
-# إعدادات الصوت
-AUDIO_CODEC="aac"
-AUDIO_RATE="44100"
+# Audio Settings
+AUDIO_CODEC="copy"  # copy = stream copy (faster, no re-encoding) | aac = re-encode
+AUDIO_RATE="44100"  # Only used if re-encoding
 
 # ═══════════════════════════════════════════════════════════
-# 4. إعدادات الأداء
+# 4. Logo/Watermark Settings
 # ═══════════════════════════════════════════════════════════
 
-# استخدام GPU للترميز (إن وجد)
+# Enable logo overlay
+LOGO_ENABLED="false"  # true or false
+
+# Path to logo image file (PNG with transparency recommended)
+LOGO_PATH="logo.png"
+
+# Logo position: topleft, topright, bottomleft, bottomright
+LOGO_POSITION="topright"
+
+# Logo offset from edges (in pixels)
+LOGO_OFFSET_X="10"
+LOGO_OFFSET_Y="10"
+
+# Logo size (leave empty for original size, or specify like "200:100" for WxH)
+LOGO_SIZE=""
+
+# Logo opacity (0.0 to 1.0, where 1.0 is fully opaque)
+LOGO_OPACITY="1.0"
+
+# ═══════════════════════════════════════════════════════════
+# 5. Performance Settings
+# ═══════════════════════════════════════════════════════════
+
+# Use GPU for encoding (if available)
 USE_GPU="auto"  # auto, nvidia, intel, amd, off
 
-# عدد الخيوط للمعالج
-THREADS="0"  # 0 = تلقائي
+# Number of threads for CPU encoding
+THREADS="0"  # 0 = automatic
 
 # ═══════════════════════════════════════════════════════════
-# 5. إعدادات tmux
+# 6. tmux Settings
 # ═══════════════════════════════════════════════════════════
 
 SESSION_NAME="fbstream"
 
 # ═══════════════════════════════════════════════════════════
-# 6. إعدادات السجلات
+# 7. Logging Settings
 # ═══════════════════════════════════════════════════════════
 
 LOG_DIR="logs"
@@ -116,7 +139,7 @@ LOG_ENABLED="true"
 LOG_LEVEL="info"  # quiet, panic, fatal, error, warning, info, verbose, debug
 
 # ═══════════════════════════════════════════════════════════
-# دالة لاختيار الجودة المناسبة
+# Function: Get Quality Settings
 # ═══════════════════════════════════════════════════════════
 
 get_quality_settings() {
@@ -167,7 +190,7 @@ get_quality_settings() {
             KEYINT=$CUSTOM_KEYINT
             ;;
         *)
-            echo "⚠️  جودة غير معروفة: $QUALITY_MODE - استخدام ULTRA افتراضياً"
+            echo "Warning: Unknown quality mode: $QUALITY_MODE - Using ULTRA as default"
             QUALITY_MODE="ultra"
             get_quality_settings
             ;;
@@ -175,7 +198,54 @@ get_quality_settings() {
 }
 
 # ═══════════════════════════════════════════════════════════
-# دالة لكشف وتفعيل GPU encoding
+# Function: Build Logo Filter
+# ═══════════════════════════════════════════════════════════
+
+build_logo_filter() {
+    if [ "$LOGO_ENABLED" != "true" ]; then
+        echo ""
+        return
+    fi
+    
+    if [ ! -f "$LOGO_PATH" ]; then
+        echo ""
+        return
+    fi
+    
+    local position_filter=""
+    case $LOGO_POSITION in
+        topleft)
+            position_filter="x=$LOGO_OFFSET_X:y=$LOGO_OFFSET_Y"
+            ;;
+        topright)
+            position_filter="x=W-w-$LOGO_OFFSET_X:y=$LOGO_OFFSET_Y"
+            ;;
+        bottomleft)
+            position_filter="x=$LOGO_OFFSET_X:y=H-h-$LOGO_OFFSET_Y"
+            ;;
+        bottomright)
+            position_filter="x=W-w-$LOGO_OFFSET_X:y=H-h-$LOGO_OFFSET_Y"
+            ;;
+        *)
+            position_filter="x=W-w-$LOGO_OFFSET_X:y=$LOGO_OFFSET_Y"
+            ;;
+    esac
+    
+    local size_filter=""
+    if [ -n "$LOGO_SIZE" ]; then
+        size_filter="scale=$LOGO_SIZE,"
+    fi
+    
+    local opacity_filter=""
+    if [ "$LOGO_OPACITY" != "1.0" ]; then
+        opacity_filter="format=rgba,colorchannelmixer=aa=$LOGO_OPACITY,"
+    fi
+    
+    echo "-i \"$LOGO_PATH\" -filter_complex \"[1:v]${size_filter}${opacity_filter}format=rgba[logo];[0:v][logo]overlay=$position_filter\""
+}
+
+# ═══════════════════════════════════════════════════════════
+# Function: Detect and Enable GPU Encoding
 # ═══════════════════════════════════════════════════════════
 
 detect_gpu_encoder() {
