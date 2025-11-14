@@ -192,6 +192,9 @@ fi
 build_ffmpeg_params() {
     local params=""
     
+    # Input format for TS streams
+    params="$params -f mpegts -analyzeduration 5000000 -probesize 5000000"
+    
     # Reconnection parameters
     if [ "$RECONNECT_ENABLED" = "true" ]; then
         params="$params -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max $RECONNECT_DELAY_MAX"
@@ -207,24 +210,24 @@ build_ffmpeg_params() {
     # Video encoding parameters
     params="$params -c:v $VIDEO_ENCODER"
     
-    # libx264 specific settings
+    # libx264 specific settings with better compatibility
     if [ "$VIDEO_ENCODER" = "libx264" ]; then
-        params="$params -preset $PRESET -tune $TUNE"
+        params="$params -preset $PRESET -tune $TUNE -profile:v main -level 4.0"
     fi
     
     # Resolution and FPS
     if [ -z "$logo_filter" ]; then
-        params="$params -s $RESOLUTION -r $FPS"
+        params="$params -vf scale=$RESOLUTION:flags=lanczos -r $FPS"
     else
         params="$params -r $FPS"
     fi
     
     # Bitrate and buffer
-    params="$params -b:v $BITRATE -maxrate $MAXRATE -bufsize $BUFSIZE"
+    params="$params -b:v $BITRATE -maxrate $MAXRATE -bufsize $BUFSIZE -minrate $BITRATE"
     
     # Key interval (2 seconds)
     local keyint_frames=$((FPS * KEYINT))
-    params="$params -g $keyint_frames -keyint_min $keyint_frames"
+    params="$params -g $keyint_frames -keyint_min $keyint_frames -sc_threshold 0"
     
     # Pixel format
     params="$params -pix_fmt $PIXEL_FORMAT"
@@ -243,11 +246,14 @@ build_ffmpeg_params() {
         params="$params -threads $THREADS"
     fi
     
+    # Output format settings for RTMP
+    params="$params -f flv -flvflags no_duration_filesize"
+    
     # Log level
     if [ "$LOG_ENABLED" = "true" ]; then
         params="$params -loglevel $LOG_LEVEL"
     else
-        params="$params -loglevel error"
+        params="$params -loglevel info"
     fi
     
     echo "$params"
@@ -322,12 +328,12 @@ EOFSCRIPT
         cat >> "$TEMP_SCRIPT" << EOFSCRIPT
 echo "Log file: $LOG_FILE"
 echo "========================================"
-ffmpeg -i "$SOURCE" $FFMPEG_PARAMS -f flv "$RTMP_URL" 2>&1 | tee -a "$LOG_FILE"
+ffmpeg $FFMPEG_PARAMS -i "$SOURCE" "$RTMP_URL" 2>&1 | tee -a "$LOG_FILE"
 EOFSCRIPT
     else
         cat >> "$TEMP_SCRIPT" << EOFSCRIPT
 echo "========================================"
-ffmpeg -i "$SOURCE" $FFMPEG_PARAMS -f flv "$RTMP_URL"
+ffmpeg $FFMPEG_PARAMS -i "$SOURCE" "$RTMP_URL"
 EOFSCRIPT
     fi
     
