@@ -9,10 +9,10 @@
 # ═══════════════════════════════════════════════════════════
 
 # M3U8 video source URL
-SOURCE="https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+SOURCE="http://g.chervx.xyz/at/sh/344543?token=SxAKVEBaQ14XUwYBBVYCD1VdBQRSB1cABAAEUVoFBw4JC1ADBQZUAVQTHBNGEEFcBQhpWAASCFcBAABTFUQTR0NXEGpaVkNeFwUHBgxVBAxGSRRFDV1XQA8ABlQKUFcFCAdXGRFCCAAXC15EWQgfGwEdQlQWXlMOalVUElAFAxQKXBdZXx5DC1tuVFRYBV1dRl8UAEYcEAtGQRNeVxMKWhwQAFxHQAAQUBMKX0AIXxVGBllECkRAGxcLEy1oREoUVUoWUF1BCAtbEwoTQRcRFUYMRW4WVUEWR1RQCVwURAwSAkAZEV8AHGpSX19bAVBNDQpYQkYKEFMXHRMJVggPQl9APUVaVkNeW0RcXUg"
 
 # RTMP server for Facebook (Stream Key is fetched from environment variables for security)
-RTMP_SERVER="rtmp://rtmp-api.facebook.com:80/rtmp/"
+RTMP_SERVER="rtmps://live-api-s.facebook.com:443/rtmp/"
 
 # ═══════════════════════════════════════════════════════════
 # 2. Quality Presets
