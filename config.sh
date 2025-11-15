@@ -9,7 +9,7 @@
 # ═══════════════════════════════════════════════════════════
 
 # Facebook Live Stream URL (DASH format)
-SOURCE="https://scontent-bom2-4.xx.fbcdn.net/hvideo-prn-frc/_nc_cat-102/_nc_sr_t-4/v/rASeg_PrnawYmbImnuC6GHWbOCv9S7uq5SF2J2vfGeTVZuQ/_nc_ohc-uVWVoqmF_6YQ7kNvwHqEY5v/live-dash/dash-abr-ibr-audio/122127409874978947.mpd?_nc_eui2=AeH6qMYEAPYzT_7WQwPG45dks1DAlZcfMfezUMCVlx8x9wjiL1GHoMTCKmnrDqy5owYJAdYmZ2t3D_Y5-sM8ypZt&_nc_zt=28&ccb=2-4&ms=m_CTPAL&sc_t=1&oh=00_AfiiCMwp5PB6x9VAhmZ_SfdKtXZXdU3RZCH57kIdMLw_zQ&oe=6919C395"
+SOURCE="http://soft24f.net/live/6872c3410e8cibopro/22bcpapc/237014.ts"
 
 # RTMP server for Facebook (Stream Key is fetched from environment variables for security)
 RTMP_SERVER="rtmps://live-api-s.facebook.com:443/rtmp/"
