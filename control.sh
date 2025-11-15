@@ -104,9 +104,15 @@ start_stream() {
         log_success "Stream key found in Replit Secrets"
     fi
     
+    # Ensure FB_STREAM_KEY is exported for child processes
     export FB_STREAM_KEY
+    
     log_info "Starting stream..."
-    bash "$SCRIPT_DIR/main.sh"
+    log_info "Stream key: ${FB_STREAM_KEY:0:10}..." # Show first 10 chars only
+    echo ""
+    
+    # Run main.sh with exported environment
+    FB_STREAM_KEY="$FB_STREAM_KEY" bash "$SCRIPT_DIR/main.sh"
 }
 
 # ═══════════════════════════════════════════════════════════

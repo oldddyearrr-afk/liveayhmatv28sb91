@@ -67,7 +67,7 @@ check_requirements() {
 }
 
 # ═══════════════════════════════════════════════════════════
-# 2. Check internet connection
+# 2. Check internet connection and Facebook RTMP
 # ═══════════════════════════════════════════════════════════
 
 check_internet() {
@@ -76,18 +76,21 @@ check_internet() {
     # Try ping first
     if ping -c 1 -W 3 8.8.8.8 &> /dev/null; then
         log_success "Internet connection OK"
-        return 0
-    fi
-    
-    # If ping fails, try curl (better for Replit environment)
-    if curl -s --max-time 5 --head https://www.facebook.com &> /dev/null; then
+    elif curl -s --max-time 5 --head https://www.facebook.com &> /dev/null; then
         log_success "Internet connection OK (verified via HTTP)"
-        return 0
+    else
+        log_error "No internet connection!"
+        log_info "Please check your network connection"
+        exit 1
     fi
     
-    log_error "No internet connection!"
-    log_info "Please check your network connection"
-    exit 1
+    # Test Facebook RTMP connection
+    log_info "Testing Facebook RTMP server..."
+    if timeout 5 bash -c "echo > /dev/tcp/live-api-s.facebook.com/443" 2>/dev/null; then
+        log_success "Facebook RTMP server reachable"
+    else
+        log_warning "Cannot reach Facebook RTMP server (may still work)"
+    fi
 }
 
 # ═══════════════════════════════════════════════════════════

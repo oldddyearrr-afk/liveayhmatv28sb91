@@ -49,19 +49,24 @@ read -p "Your choice: " choice
 
 case $choice in
     1)
-        ./extract_link.sh
+        bash ./extract_link.sh
         ;;
     2)
-        ./control.sh start
+        echo ""
+        echo -e "${GREEN}Starting stream...${NC}"
+        echo ""
+        bash ./control.sh start
         ;;
     3)
-        ./control.sh status
+        bash ./control.sh status
         ;;
     4)
         echo "Goodbye! 👋"
         exit 0
         ;;
     *)
-        echo "Invalid choice"
+        echo -e "${RED}Invalid choice${NC}"
+        echo ""
+        bash ./quick_start.sh
         ;;
 esac
