@@ -10,6 +10,15 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/config.sh"
 
+# إذا كان link.json موجود، استخدم الرابط منه
+if [ -f "$SCRIPT_DIR/link.json" ]; then
+    LINK_JSON_URL=$(grep "stream_url" "$SCRIPT_DIR/link.json" | cut -d'"' -f4)
+    if [ -n "$LINK_JSON_URL" ]; then
+        SOURCE="$LINK_JSON_URL"
+        log_info "Using stream URL from link.json"
+    fi
+fi
+
 # ═══════════════════════════════════════════════════════════
 # Colors for console output
 # ═══════════════════════════════════════════════════════════

@@ -61,11 +61,18 @@ get_stream_status() {
 
 start_stream() {
     local status=$(get_stream_status)
+    local stream_key="${1:-}"
     
     if [ "$status" = "running" ]; then
         log_warning "Stream is already running!"
         log_info "Use 'restart' to restart it"
         return 1
+    fi
+    
+    # إذا تم تمرير stream_key، استخدمه
+    if [ -n "$stream_key" ]; then
+        export FB_STREAM_KEY="$stream_key"
+        log_success "Using provided stream key"
     fi
     
     log_info "Starting stream..."
@@ -216,11 +223,11 @@ attach_stream() {
 show_help() {
     print_header
     echo -e "${CYAN}Usage:${NC}"
-    echo -e "  ./control.sh ${GREEN}[command]${NC}"
+    echo -e "  ./control.sh ${GREEN}[command]${NC} ${YELLOW}[stream_key]${NC}"
     echo ""
     echo -e "${CYAN}Available Commands:${NC}"
     echo ""
-    echo -e "  ${GREEN}start${NC}        - Start streaming"
+    echo -e "  ${GREEN}start${NC} ${YELLOW}[key]${NC}  - Start streaming (optional: provide stream key)"
     echo -e "  ${GREEN}stop${NC}         - Stop streaming"
     echo -e "  ${GREEN}restart${NC}      - Restart streaming"
     echo -e "  ${GREEN}status${NC}       - Show stream status"
@@ -229,9 +236,10 @@ show_help() {
     echo -e "  ${GREEN}help${NC}         - Show this help"
     echo ""
     echo -e "${CYAN}Examples:${NC}"
-    echo -e "  ./control.sh start       ${BLUE}# Start streaming${NC}"
-    echo -e "  ./control.sh status      ${BLUE}# Check status${NC}"
-    echo -e "  ./control.sh logs        ${BLUE}# View logs${NC}"
+    echo -e "  ./control.sh start                    ${BLUE}# Use FB_STREAM_KEY from environment${NC}"
+    echo -e "  ./control.sh start YOUR_KEY_HERE      ${BLUE}# Use provided stream key${NC}"
+    echo -e "  ./control.sh status                   ${BLUE}# Check status${NC}"
+    echo -e "  ./control.sh logs                     ${BLUE}# View logs${NC}"
     echo ""
 }
 
@@ -284,7 +292,7 @@ main() {
     case "${1:-}" in
         start)
             print_header
-            start_stream
+            start_stream "${2:-}"
             ;;
         stop)
             print_header
