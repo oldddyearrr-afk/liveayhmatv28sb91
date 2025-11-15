@@ -1,5 +1,5 @@
 entrypoint = "main.sh"
-modules = ["bash"]
+modules = ["bash", "python-3.11"]
 
 [nix]
 channel = "stable-24_05"
@@ -21,15 +21,20 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Facebook Stream"
+args = "Stream Dashboard"
 
 [[workflows.workflow]]
-name = "Facebook Stream"
+name = "Stream Dashboard"
 author = "agent"
-
-[workflows.workflow.metadata]
-outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "./control.sh"
+args = "python web_dashboard.py"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
