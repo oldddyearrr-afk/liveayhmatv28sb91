@@ -1,6 +1,20 @@
 # متغيرات البيئة (تحتوي على أسرار)
 .env
 
+# ملفات الكوكيز (حساسة جداً - لا ترفعها أبداً!)
+*.txt
+cookies*.txt
+facebook_cookies.txt
+
+# معلومات الاستخراج
+link.json
+extracted*.txt
+
+# نسخ احتياطية
+*.backup
+*.backup.*
+config.sh.backup*
+
 # السجلات
 logs/
 *.log
@@ -15,3 +29,8 @@ Thumbs.db
 *~
 .*.swp
 .*.swo
+
+# ملفات Python
+__pycache__/
+*.py[cod]
+.pythonlibs/

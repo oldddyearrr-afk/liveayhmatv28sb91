@@ -21,19 +21,18 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Stream Dashboard"
+args = "Facebook Stream Control"
 
 [[workflows.workflow]]
-name = "Stream Dashboard"
+name = "Facebook Stream Control"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python web_dashboard.py"
-waitForPort = 5000
+args = "bash quick_start.sh"
 
 [workflows.workflow.metadata]
-outputType = "webview"
+outputType = "console"
 
 [[ports]]
 localPort = 5000
