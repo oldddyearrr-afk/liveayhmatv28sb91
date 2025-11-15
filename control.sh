@@ -75,6 +75,13 @@ start_stream() {
         log_success "Using provided stream key"
     fi
     
+    # التحقق من وجود FB_STREAM_KEY
+    if [ -z "$FB_STREAM_KEY" ]; then
+        log_error "Stream key not found!"
+        log_info "Usage: ./control.sh start YOUR_STREAM_KEY"
+        return 1
+    fi
+    
     log_info "Starting stream..."
     bash "$SCRIPT_DIR/main.sh"
 }
