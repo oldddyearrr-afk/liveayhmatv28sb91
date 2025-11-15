@@ -27,6 +27,25 @@ print_header() {
     echo ""
 }
 
+check_secrets_env() {
+    if [ -z "$FB_STREAM_KEY" ]; then
+        log_error "FB_STREAM_KEY not found in environment!"
+        echo ""
+        log_info "📌 How to fix this:"
+        echo -e "  ${YELLOW}1.${NC} Click on the Lock icon (🔒) in the left sidebar"
+        echo -e "  ${YELLOW}2.${NC} Add a new Secret:"
+        echo -e "     ${GREEN}Key:${NC} FB_STREAM_KEY"
+        echo -e "     ${GREEN}Value:${NC} [Your Facebook Stream Key]"
+        echo -e "  ${YELLOW}3.${NC} Get your stream key from Facebook Creator Studio"
+        echo ""
+        log_info "Or provide it as a parameter:"
+        echo -e "  ${GREEN}./control.sh start YOUR_STREAM_KEY${NC}"
+        echo ""
+        return 1
+    fi
+    return 0
+}
+
 log_info() {
     echo -e "${BLUE}[INFO]${NC} $1"
 }
@@ -69,26 +88,23 @@ start_stream() {
         return 1
     fi
     
-    # إذا تم تمرير stream_key، استخدمه
+    # If stream_key provided as parameter, use it
     if [ -n "$stream_key" ]; then
         export FB_STREAM_KEY="$stream_key"
-        log_success "Using provided stream key"
-    elif [ -z "$FB_STREAM_KEY" ]; then
-        # محاولة قراءة من Replit Secrets
-        log_info "Reading stream key from Replit Secrets..."
-        FB_STREAM_KEY="${FB_STREAM_KEY}"
-    fi
-    
-    # التحقق من وجود FB_STREAM_KEY
-    if [ -z "$FB_STREAM_KEY" ]; then
-        log_error "Stream key not found!"
-        log_info "Please add FB_STREAM_KEY to Replit Secrets"
-        log_info "Or use: ./control.sh start YOUR_STREAM_KEY"
-        return 1
+        log_success "Using provided stream key from parameter"
+    else
+        # Try to read from environment (Replit Secrets)
+        log_info "Checking for stream key in Replit Secrets..."
+        
+        if [ -z "$FB_STREAM_KEY" ]; then
+            check_secrets_env
+            return 1
+        fi
+        
+        log_success "Stream key found in Replit Secrets"
     fi
     
     export FB_STREAM_KEY
-    log_success "Stream key loaded successfully"
     log_info "Starting stream..."
     bash "$SCRIPT_DIR/main.sh"
 }
@@ -249,10 +265,15 @@ show_help() {
     echo -e "  ${GREEN}attach${NC}       - Attach to stream session"
     echo -e "  ${GREEN}help${NC}         - Show this help"
     echo ""
+    echo -e "${CYAN}Setup Instructions:${NC}"
+    echo -e "  ${YELLOW}1.${NC} Add ${GREEN}FB_STREAM_KEY${NC} to Replit Secrets (🔒 icon)"
+    echo -e "  ${YELLOW}2.${NC} Configure ${GREEN}SOURCE${NC} URL in config.sh"
+    echo -e "  ${YELLOW}3.${NC} Run: ${GREEN}./control.sh start${NC}"
+    echo ""
     echo -e "${CYAN}Examples:${NC}"
-    echo -e "  ./control.sh start                    ${BLUE}# Use FB_STREAM_KEY from environment${NC}"
+    echo -e "  ./control.sh start                    ${BLUE}# Use FB_STREAM_KEY from Secrets${NC}"
     echo -e "  ./control.sh start YOUR_KEY_HERE      ${BLUE}# Use provided stream key${NC}"
-    echo -e "  ./control.sh status                   ${BLUE}# Check status${NC}"
+    echo -e "  ./control.sh status                   ${BLUE}# Check stream status${NC}"
     echo -e "  ./control.sh logs                     ${BLUE}# View logs${NC}"
     echo ""
 }

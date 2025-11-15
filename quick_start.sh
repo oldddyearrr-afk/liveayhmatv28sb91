@@ -11,35 +11,41 @@ NC='\033[0m'
 
 clear
 echo -e "${BLUE}════════════════════════════════════════════${NC}"
-echo -e "${BLUE}    📺 Facebook Live Stream - البدء السريع ${NC}"
+echo -e "${BLUE}    📺 Facebook Live Stream - Quick Start ${NC}"
 echo -e "${BLUE}════════════════════════════════════════════${NC}"
 echo ""
 
-echo -e "${YELLOW}الخطوة 1: استخراج رابط البث${NC}"
-echo "  الأمر: ./extract_link.sh"
+echo -e "${YELLOW}Step 1: Extract stream link (optional)${NC}"
+echo "  Command: ./extract_link.sh"
 echo ""
 
-echo -e "${YELLOW}الخطوة 2: إضافة مفتاح البث في Replit Secrets${NC}"
-echo "  1. افتح تبويب Secrets (🔒)"
-echo "  2. أضف: FB_STREAM_KEY = مفتاحك"
+echo -e "${YELLOW}Step 2: Add stream key in Replit Secrets${NC}"
+echo "  1. Open Secrets tab (🔒 icon in sidebar)"
+echo "  2. Add new Secret:"
+echo "     Key: FB_STREAM_KEY"
+echo "     Value: [Your Facebook Stream Key]"
 echo ""
 
-echo -e "${YELLOW}الخطوة 3: بدء البث${NC}"
-echo "  الأمر: ./control.sh start"
+echo -e "${YELLOW}Step 3: Configure source in config.sh${NC}"
+echo "  Edit SOURCE variable with your stream URL"
+echo ""
+
+echo -e "${YELLOW}Step 4: Start streaming${NC}"
+echo "  Command: ./control.sh start"
 echo ""
 
 echo -e "${GREEN}════════════════════════════════════════════${NC}"
 echo ""
 
-echo "هل تريد البدء الآن؟"
+echo "What would you like to do?"
 echo ""
-echo "  1) استخراج رابط البث"
-echo "  2) بدء البث (إذا كان الرابط جاهز)"
-echo "  3) عرض الحالة"
-echo "  4) خروج"
+echo "  1) Extract stream link"
+echo "  2) Start streaming (if ready)"
+echo "  3) Show status"
+echo "  4) Exit"
 echo ""
 
-read -p "اختيارك: " choice
+read -p "Your choice: " choice
 
 case $choice in
     1)
@@ -52,10 +58,10 @@ case $choice in
         ./control.sh status
         ;;
     4)
-        echo "مع السلامة! 👋"
+        echo "Goodbye! 👋"
         exit 0
         ;;
     *)
-        echo "اختيار غير صحيح"
+        echo "Invalid choice"
         ;;
 esac
