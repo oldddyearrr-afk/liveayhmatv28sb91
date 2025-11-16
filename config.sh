@@ -124,7 +124,7 @@ LOGO_OFFSET_Y="20"
 
 # Logo size (leave empty for original size, or specify like "200:100" for WxH)
 # Example: "350:-1" = 350px width, maintain aspect ratio
-LOGO_SIZE="350:-1"
+LOGO_SIZE="370:-1"
 
 # Logo opacity (0.0 to 1.0, where 1.0 is fully opaque)
 LOGO_OPACITY="0.95"
