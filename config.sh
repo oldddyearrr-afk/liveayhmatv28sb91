@@ -9,7 +9,7 @@
 # ═══════════════════════════════════════════════════════════
 
 # Facebook Live Stream URL (DASH format)
-SOURCE="http://soft24f.net/live/6872c3410e8cibopro/22bcpapc/237014.ts"
+SOURCE="http://mydroon.com:80/live/Wakrim70:b1:3d:b1:07:0a/BoYmj6FLljGXvqU/75228.ts"
 
 # RTMP server for Facebook (Stream Key is fetched from environment variables for security)
 RTMP_SERVER="rtmps://live-api-s.facebook.com:443/rtmp/"
