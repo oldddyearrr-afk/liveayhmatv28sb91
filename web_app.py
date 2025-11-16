@@ -103,6 +103,11 @@ def api_status():
 @app.route('/api/start', methods=['POST'])
 def api_start():
     try:
+        # Clean up old logs before starting
+        if os.path.exists('cleanup_logs.sh'):
+            subprocess.run(['bash', 'cleanup_logs.sh'], check=False, 
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        
         # Check if already running
         if get_stream_status():
             # Stop first

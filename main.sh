@@ -167,6 +167,11 @@ setup_logs() {
     if [ "$LOG_ENABLED" = "true" ]; then
         mkdir -p "$LOG_DIR"
         log_success "Logging directory ready: $LOG_DIR"
+        
+        if [ -f "$SCRIPT_DIR/cleanup_logs.sh" ]; then
+            log_info "Cleaning up old log files..."
+            bash "$SCRIPT_DIR/cleanup_logs.sh" 2>/dev/null || true
+        fi
     fi
 }
 
