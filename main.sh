@@ -224,41 +224,58 @@ build_ffmpeg_command() {
     # OUTPUT PARAMETERS (after -i)
     # ─────────────────────────────────────────────────────────
 
-    # Add logo input if enabled
-    if [ "$LOGO_ENABLED" = "true" ] && [ -f "$LOGO_PATH" ]; then
-        logo_params="-i \"$LOGO_PATH\""
-    fi
-
-    # Re-encode video to H.264 and audio to AAC (Facebook requirement)
-    output_params="$output_params -c:v $VIDEO_ENCODER"
-    output_params="$output_params -preset $PRESET -tune $TUNE"
-    output_params="$output_params -b:v $BITRATE -maxrate $MAXRATE -bufsize $BUFSIZE"
-    output_params="$output_params -pix_fmt $PIXEL_FORMAT"
-    output_params="$output_params -g $((FPS * KEYINT))"
-    output_params="$output_params -keyint_min $((FPS * KEYINT))"
-    
-    # Add logo filter if enabled (BEFORE audio encoding)
-    if [ "$LOGO_ENABLED" = "true" ] && [ -f "$LOGO_PATH" ]; then
-        local logo_filter=$(build_logo_filter)
-        if [ -n "$logo_filter" ]; then
-            output_params="$output_params $logo_filter"
+    # Check streaming mode: copy or encode
+    if [ "$STREAMING_MODE" = "copy" ]; then
+        # ═══════════════════════════════════════════════════════
+        # STREAM COPY MODE - Direct copy, no re-encoding
+        # ═══════════════════════════════════════════════════════
+        output_params="$output_params -c copy"
+        
+        # Output format for RTMP/Facebook
+        output_params="$output_params -f flv"
+        output_params="$output_params -flvflags no_duration_filesize"
+        
+    else
+        # ═══════════════════════════════════════════════════════
+        # ENCODE MODE - Re-encode with logo overlay
+        # ═══════════════════════════════════════════════════════
+        
+        # Add logo input if enabled
+        if [ "$LOGO_ENABLED" = "true" ] && [ -f "$LOGO_PATH" ]; then
+            logo_params="-i \"$LOGO_PATH\""
         fi
+
+        # Re-encode video to H.264 and audio to AAC (Facebook requirement)
+        output_params="$output_params -c:v $VIDEO_ENCODER"
+        output_params="$output_params -preset $PRESET -tune $TUNE"
+        output_params="$output_params -b:v $BITRATE -maxrate $MAXRATE -bufsize $BUFSIZE"
+        output_params="$output_params -pix_fmt $PIXEL_FORMAT"
+        output_params="$output_params -g $((FPS * KEYINT))"
+        output_params="$output_params -keyint_min $((FPS * KEYINT))"
+        
+        # Add logo filter if enabled (BEFORE audio encoding)
+        if [ "$LOGO_ENABLED" = "true" ] && [ -f "$LOGO_PATH" ]; then
+            local logo_filter=$(build_logo_filter)
+            if [ -n "$logo_filter" ]; then
+                output_params="$output_params $logo_filter"
+            fi
+        fi
+        
+        # Audio encoding
+        output_params="$output_params -c:a aac -b:a 128k -ar 44100 -ac 2"
+
+        # Output format for RTMP/Facebook
+        output_params="$output_params -f flv"
+        output_params="$output_params -flvflags no_duration_filesize"
+
+        # Sync and timing fixes
+        output_params="$output_params -async 1"
+        output_params="$output_params -vsync cfr"
+        output_params="$output_params -copytb 1"
+
+        # Buffer settings
+        output_params="$output_params -max_muxing_queue_size 9999"
     fi
-    
-    # Audio encoding
-    output_params="$output_params -c:a aac -b:a 128k -ar 44100 -ac 2"
-
-    # Output format for RTMP/Facebook
-    output_params="$output_params -f flv"
-    output_params="$output_params -flvflags no_duration_filesize"
-
-    # Sync and timing fixes
-    output_params="$output_params -async 1"
-    output_params="$output_params -vsync cfr"
-    output_params="$output_params -copytb 1"
-
-    # Buffer settings
-    output_params="$output_params -max_muxing_queue_size 9999"
 
     # Return both parts separated by a marker
     echo "INPUT:$input_params LOGO:$logo_params OUTPUT:$output_params"
@@ -273,22 +290,25 @@ display_stream_info() {
     log_info "========================================"
     log_info "Stream Configuration"
     log_info "========================================"
-    echo -e "${BLUE}Quality:${NC} $QUALITY_MODE"
-    echo -e "${BLUE}Resolution:${NC} $RESOLUTION"
-    echo -e "${BLUE}FPS:${NC} $FPS"
-    echo -e "${BLUE}Bitrate:${NC} $BITRATE (max: $MAXRATE)"
-    echo -e "${BLUE}Key Interval:${NC} ${KEYINT}s (every $((FPS * KEYINT)) frames)"
-
-    if [ "$AUDIO_CODEC" = "copy" ]; then
-        echo -e "${BLUE}Audio:${NC} Stream copy (no re-encoding)"
+    
+    # Display streaming mode
+    if [ "$STREAMING_MODE" = "copy" ]; then
+        echo -e "${GREEN}Mode:${NC} Stream Copy ⚡ (Direct, No Re-encoding)"
+        echo -e "${BLUE}Video:${NC} Copy from source"
+        echo -e "${BLUE}Audio:${NC} Copy from source"
+        echo -e "${YELLOW}Logo:${NC} Disabled (not available in copy mode)"
     else
-        echo -e "${BLUE}Audio:${NC} $AUDIO_BITRATE @ ${AUDIO_RATE}Hz"
-    fi
-
-    echo -e "${BLUE}Encoder:${NC} $VIDEO_ENCODER"
-
-    if [ "$LOGO_ENABLED" = "true" ] && [ -f "$LOGO_PATH" ]; then
-        echo -e "${BLUE}Logo:${NC} Enabled ($LOGO_POSITION)"
+        echo -e "${GREEN}Mode:${NC} Re-encode 🎨 (With Logo Support)"
+        echo -e "${BLUE}Quality:${NC} $QUALITY_MODE"
+        echo -e "${BLUE}Resolution:${NC} $RESOLUTION"
+        echo -e "${BLUE}FPS:${NC} $FPS"
+        echo -e "${BLUE}Bitrate:${NC} $BITRATE (max: $MAXRATE)"
+        echo -e "${BLUE}Key Interval:${NC} ${KEYINT}s (every $((FPS * KEYINT)) frames)"
+        echo -e "${BLUE}Encoder:${NC} $VIDEO_ENCODER"
+        
+        if [ "$LOGO_ENABLED" = "true" ] && [ -f "$LOGO_PATH" ]; then
+            echo -e "${BLUE}Logo:${NC} Enabled ($LOGO_POSITION, size: $LOGO_SIZE)"
+        fi
     fi
 
     echo -e "${BLUE}Source:${NC} $SOURCE"
