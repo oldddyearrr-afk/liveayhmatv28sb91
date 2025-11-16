@@ -245,7 +245,8 @@ build_logo_filter() {
         opacity_filter="format=rgba,colorchannelmixer=aa=$LOGO_OPACITY,"
     fi
     
-    echo "-i \"$LOGO_PATH\" -filter_complex \"[1:v]${size_filter}${opacity_filter}format=rgba[logo];[0:v][logo]overlay=$position_filter\""
+    # Return only the filter, not the -i flag
+    echo "-filter_complex \"[1:v]${size_filter}${opacity_filter}format=rgba[logo];[0:v][logo]overlay=$position_filter\""
 }
 
 # ═══════════════════════════════════════════════════════════

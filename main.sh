@@ -224,7 +224,7 @@ build_ffmpeg_command() {
     # OUTPUT PARAMETERS (after -i)
     # ─────────────────────────────────────────────────────────
 
-    # Add logo overlay if enabled
+    # Add logo input if enabled
     if [ "$LOGO_ENABLED" = "true" ] && [ -f "$LOGO_PATH" ]; then
         logo_params="-i \"$LOGO_PATH\""
     fi
@@ -236,15 +236,17 @@ build_ffmpeg_command() {
     output_params="$output_params -pix_fmt $PIXEL_FORMAT"
     output_params="$output_params -g $((FPS * KEYINT))"
     output_params="$output_params -keyint_min $((FPS * KEYINT))"
-    output_params="$output_params -c:a aac -b:a 128k -ar 44100 -ac 2"
-
-    # Add logo filter if enabled
+    
+    # Add logo filter if enabled (BEFORE audio encoding)
     if [ "$LOGO_ENABLED" = "true" ] && [ -f "$LOGO_PATH" ]; then
         local logo_filter=$(build_logo_filter)
         if [ -n "$logo_filter" ]; then
             output_params="$output_params $logo_filter"
         fi
     fi
+    
+    # Audio encoding
+    output_params="$output_params -c:a aac -b:a 128k -ar 44100 -ac 2"
 
     # Output format for RTMP/Facebook
     output_params="$output_params -f flv"
@@ -327,12 +329,17 @@ start_stream() {
 
     log_info "Starting stream..."
 
+    # Build complete FFmpeg command
+    local FFMPEG_FULL_CMD="ffmpeg $INPUT_PARAMS -i \"$SOURCE\" $LOGO_PARAMS $OUTPUT_PARAMS \"$RTMP_URL\""
+    
+    log_info "FFmpeg command ready"
+    
     # Create temporary script to run inside tmux
     local TEMP_SCRIPT="/tmp/fbstream_$$.sh"
-    cat > "$TEMP_SCRIPT" << EOFSCRIPT
+    cat > "$TEMP_SCRIPT" << 'EOFSCRIPT'
 #!/bin/bash
 echo "========================================"
-echo "Stream started at: \$(date)"
+echo "Stream started at: $(date)"
 echo "========================================"
 EOFSCRIPT
 
@@ -341,13 +348,13 @@ EOFSCRIPT
 echo "Log file: $LOG_FILE"
 echo "========================================"
 echo "Starting FFmpeg..."
-ffmpeg $INPUT_PARAMS -i "$SOURCE" $LOGO_PARAMS $OUTPUT_PARAMS "$RTMP_URL" 2>&1 | tee -a "$LOG_FILE"
+$FFMPEG_FULL_CMD 2>&1 | tee -a "$LOG_FILE"
 EOFSCRIPT
     else
         cat >> "$TEMP_SCRIPT" << EOFSCRIPT
 echo "========================================"
 echo "Starting FFmpeg..."
-ffmpeg $INPUT_PARAMS -i "$SOURCE" $LOGO_PARAMS $OUTPUT_PARAMS "$RTMP_URL"
+$FFMPEG_FULL_CMD
 EOFSCRIPT
     fi
 
