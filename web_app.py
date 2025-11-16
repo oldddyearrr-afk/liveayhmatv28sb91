@@ -1,9 +1,10 @@
 
 #!/usr/bin/env python3
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, send_from_directory
 import subprocess
 import os
 import json
+import re
 from datetime import datetime
 
 app = Flask(__name__)
@@ -19,6 +20,46 @@ def get_stream_status():
         return result.returncode == 0
     except:
         return False
+
+def parse_config():
+    """Parse config.sh to get logo settings"""
+    config = {
+        'logo_enabled': False,
+        'logo_path': 'channel_logo.png',
+        'logo_position': 'topright',
+        'logo_size': '350:-1',
+        'logo_opacity': '0.95',
+        'logo_offset_x': '20',
+        'logo_offset_y': '20',
+        'streaming_mode': 'encode'
+    }
+    
+    try:
+        with open('config.sh', 'r', encoding='utf-8') as f:
+            content = f.read()
+            
+            patterns = {
+                'logo_enabled': r'LOGO_ENABLED="([^"]+)"',
+                'logo_path': r'LOGO_PATH="([^"]+)"',
+                'logo_position': r'LOGO_POSITION="([^"]+)"',
+                'logo_size': r'LOGO_SIZE="([^"]*)"',
+                'logo_opacity': r'LOGO_OPACITY="([^"]+)"',
+                'logo_offset_x': r'LOGO_OFFSET_X="([^"]+)"',
+                'logo_offset_y': r'LOGO_OFFSET_Y="([^"]+)"',
+                'streaming_mode': r'STREAMING_MODE="([^"]+)"'
+            }
+            
+            for key, pattern in patterns.items():
+                match = re.search(pattern, content)
+                if match:
+                    config[key] = match.group(1)
+        
+        config['logo_enabled'] = config['logo_enabled'].lower() == 'true'
+        
+    except Exception as e:
+        print(f"Error parsing config: {e}")
+    
+    return config
 
 def get_stream_info():
     """Get stream information"""
@@ -107,10 +148,32 @@ def api_logs():
             log_path = os.path.join('logs', info['log_file'])
             with open(log_path, 'r') as f:
                 lines = f.readlines()
-                return jsonify({'logs': lines[-50:]})  # Last 50 lines
+                return jsonify({'logs': lines[-50:]})
         return jsonify({'logs': []})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/logo-config')
+def api_logo_config():
+    try:
+        config = parse_config()
+        
+        logo_exists = os.path.exists(config['logo_path'])
+        config['logo_exists'] = logo_exists
+        
+        if logo_exists:
+            config['logo_url'] = f"/logo/{os.path.basename(config['logo_path'])}"
+        else:
+            config['logo_url'] = None
+            
+        return jsonify(config)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/logo/<path:filename>')
+def serve_logo(filename):
+    logo_dir = os.path.dirname(os.path.abspath(__file__))
+    return send_from_directory(logo_dir, filename)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)

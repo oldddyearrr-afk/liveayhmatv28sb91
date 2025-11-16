@@ -12,7 +12,7 @@ deploymentTarget = "cloudrun"
 expertMode = true
 
 [workflows]
-runButton = "Web UI"
+runButton = "Project"
 
 [[workflows.workflow]]
 name = "Project"
@@ -27,12 +27,13 @@ args = "Facebook Stream Control"
 name = "Facebook Stream Control"
 author = "agent"
 
+[workflows.workflow.metadata]
+outputType = "webview"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "bash quick_start.sh"
-
-[workflows.workflow.metadata]
-outputType = "console"
+args = "python web_app.py"
+waitForPort = 5000
 
 [[workflows.workflow]]
 name = "Web UI"
@@ -46,3 +47,7 @@ args = "python3 web_app.py"
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 41633
+externalPort = 3000

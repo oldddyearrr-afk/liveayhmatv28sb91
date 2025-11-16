@@ -27,7 +27,7 @@
             border-radius: 20px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             padding: 40px;
-            max-width: 600px;
+            max-width: 900px;
             width: 100%;
         }
         
@@ -193,6 +193,103 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        
+        .preview-section {
+            margin-bottom: 30px;
+        }
+        
+        .preview-title {
+            text-align: center;
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        
+        .preview-container {
+            position: relative;
+            width: 100%;
+            padding-bottom: 56.25%;
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .preview-content {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.3);
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+        
+        .preview-logo {
+            position: absolute;
+            max-width: 30%;
+            max-height: 30%;
+            object-fit: contain;
+            transition: all 0.3s ease;
+        }
+        
+        .logo-info {
+            background: #f0f4f8;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            font-size: 0.9em;
+        }
+        
+        .logo-info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .logo-info-item:last-child {
+            border-bottom: none;
+        }
+        
+        .logo-info-label {
+            color: #64748b;
+            font-weight: 600;
+        }
+        
+        .logo-info-value {
+            color: #334155;
+            font-weight: 500;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+        
+        .status-badge.enabled {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status-badge.disabled {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .btn-refresh {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            grid-column: 1 / -1;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -201,6 +298,34 @@
         <p class="subtitle">لوحة التحكم البسيطة</p>
         
         <div id="alert" class="alert"></div>
+        
+        <div class="preview-section">
+            <div class="preview-title">🎨 معاينة اللوجو على البث</div>
+            <div class="preview-container" id="preview-container">
+                <div class="preview-content">
+                    معاينة البث 1920×1080
+                </div>
+                <img id="preview-logo" class="preview-logo" style="display: none;" />
+            </div>
+            <div class="logo-info" id="logo-info">
+                <div class="logo-info-item">
+                    <span class="logo-info-label">الحالة:</span>
+                    <span class="logo-info-value" id="logo-status">جاري التحميل...</span>
+                </div>
+                <div class="logo-info-item">
+                    <span class="logo-info-label">الموضع:</span>
+                    <span class="logo-info-value" id="logo-position-text">-</span>
+                </div>
+                <div class="logo-info-item">
+                    <span class="logo-info-label">الحجم:</span>
+                    <span class="logo-info-value" id="logo-size-text">-</span>
+                </div>
+                <div class="logo-info-item">
+                    <span class="logo-info-label">الشفافية:</span>
+                    <span class="logo-info-value" id="logo-opacity-text">-</span>
+                </div>
+            </div>
+        </div>
         
         <div class="status-card">
             <div id="status" class="status-indicator status-stopped">
@@ -212,6 +337,9 @@
         </div>
         
         <div class="buttons">
+            <button id="btn-refresh" class="btn-refresh" onclick="loadLogoPreview()">
+                🔄 تحديث معاينة اللوجو
+            </button>
             <button id="btn-start" class="btn-start" onclick="startStream()">
                 ▶️ تشغيل البث
             </button>
@@ -228,12 +356,108 @@
     
     <script>
         let autoRefresh;
+        let logoConfig = null;
         
         function showAlert(message, type) {
             const alert = document.getElementById('alert');
             alert.className = `alert alert-${type} show`;
             alert.textContent = message;
             setTimeout(() => alert.classList.remove('show'), 5000);
+        }
+        
+        function getPositionArabic(position) {
+            const positions = {
+                'topleft': 'أعلى اليسار',
+                'topright': 'أعلى اليمين',
+                'bottomleft': 'أسفل اليسار',
+                'bottomright': 'أسفل اليمين'
+            };
+            return positions[position] || position;
+        }
+        
+        async function loadLogoPreview() {
+            try {
+                const res = await fetch('/api/logo-config');
+                const config = await res.json();
+                
+                logoConfig = config;
+                
+                const logoImg = document.getElementById('preview-logo');
+                const logoStatus = document.getElementById('logo-status');
+                const logoPositionText = document.getElementById('logo-position-text');
+                const logoSizeText = document.getElementById('logo-size-text');
+                const logoOpacityText = document.getElementById('logo-opacity-text');
+                
+                if (config.streaming_mode !== 'encode') {
+                    logoStatus.innerHTML = '<span class="status-badge disabled">معطل (وضع النسخ المباشر)</span>';
+                    logoImg.style.display = 'none';
+                    logoPositionText.textContent = 'غير متاح';
+                    logoSizeText.textContent = 'غير متاح';
+                    logoOpacityText.textContent = 'غير متاح';
+                    return;
+                }
+                
+                if (!config.logo_enabled || !config.logo_exists) {
+                    const statusText = !config.logo_enabled ? 'معطل في الإعدادات' : 'الملف غير موجود';
+                    logoStatus.innerHTML = `<span class="status-badge disabled">${statusText}</span>`;
+                    logoImg.style.display = 'none';
+                    logoPositionText.textContent = getPositionArabic(config.logo_position);
+                    logoSizeText.textContent = config.logo_size || 'الحجم الأصلي';
+                    logoOpacityText.textContent = `${parseFloat(config.logo_opacity) * 100}%`;
+                    return;
+                }
+                
+                logoStatus.innerHTML = '<span class="status-badge enabled">مفعّل ✓</span>';
+                logoPositionText.textContent = getPositionArabic(config.logo_position);
+                logoSizeText.textContent = config.logo_size || 'الحجم الأصلي';
+                logoOpacityText.textContent = `${parseFloat(config.logo_opacity) * 100}%`;
+                
+                logoImg.src = config.logo_url + '?t=' + new Date().getTime();
+                logoImg.style.display = 'block';
+                logoImg.style.opacity = config.logo_opacity;
+                
+                const offsetX = config.logo_offset_x || '20';
+                const offsetY = config.logo_offset_y || '20';
+                
+                switch (config.logo_position) {
+                    case 'topleft':
+                        logoImg.style.top = offsetY + 'px';
+                        logoImg.style.left = offsetX + 'px';
+                        logoImg.style.right = 'auto';
+                        logoImg.style.bottom = 'auto';
+                        break;
+                    case 'topright':
+                        logoImg.style.top = offsetY + 'px';
+                        logoImg.style.right = offsetX + 'px';
+                        logoImg.style.left = 'auto';
+                        logoImg.style.bottom = 'auto';
+                        break;
+                    case 'bottomleft':
+                        logoImg.style.bottom = offsetY + 'px';
+                        logoImg.style.left = offsetX + 'px';
+                        logoImg.style.right = 'auto';
+                        logoImg.style.top = 'auto';
+                        break;
+                    case 'bottomright':
+                        logoImg.style.bottom = offsetY + 'px';
+                        logoImg.style.right = offsetX + 'px';
+                        logoImg.style.left = 'auto';
+                        logoImg.style.top = 'auto';
+                        break;
+                }
+                
+                if (config.logo_size && config.logo_size !== '') {
+                    const parts = config.logo_size.split(':');
+                    if (parts[0] && parts[0] !== '-1') {
+                        const widthPercent = (parseInt(parts[0]) / 1920) * 100;
+                        logoImg.style.maxWidth = widthPercent + '%';
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Error loading logo preview:', error);
+                showAlert('❌ فشل تحميل معاينة اللوجو', 'error');
+            }
         }
         
         function updateStatus() {
@@ -353,8 +577,11 @@
             return div.innerHTML;
         }
         
-        // Update status every 3 seconds
+        // Initialize on page load
         updateStatus();
+        loadLogoPreview();
+        
+        // Update status every 3 seconds
         autoRefresh = setInterval(updateStatus, 3000);
     </script>
 </body>
