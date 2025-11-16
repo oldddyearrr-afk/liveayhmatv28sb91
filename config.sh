@@ -119,7 +119,7 @@ LOGO_PATH="channel_logo.png"
 LOGO_POSITION="topright"
 
 # Logo offset from edges (in pixels)
-LOGO_OFFSET_X="-4"
+LOGO_OFFSET_X="2"
 LOGO_OFFSET_Y="-2"
 
 # Logo size (leave empty for original size, or specify like "200:100" for WxH)
