@@ -268,8 +268,9 @@ build_logo_filter() {
         opacity_filter="format=rgba,colorchannelmixer=aa=$LOGO_OPACITY,"
     fi
     
-    # Return only the filter, not the -i flag
-    echo "-filter_complex \"[1:v]${size_filter}${opacity_filter}format=rgba[logo];[0:v][logo]overlay=$position_filter\""
+    # ✅ NEW: Scale video to target resolution FIRST, then add logo
+    # This ensures logo position stays consistent regardless of source resolution
+    echo "-filter_complex \"[0:v]scale=$RESOLUTION:force_original_aspect_ratio=decrease,pad=$RESOLUTION:(ow-iw)/2:(oh-ih)/2,setsar=1[scaled];[1:v]${size_filter}${opacity_filter}format=rgba[logo];[scaled][logo]overlay=$position_filter\""
 }
 
 # ═══════════════════════════════════════════════════════════

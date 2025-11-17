@@ -265,12 +265,15 @@ build_ffmpeg_command() {
         # Fast encoding options
         output_params="$output_params -sc_threshold 0"
         
-        # Add logo filter if enabled
+        # Add logo filter if enabled, OR scale to target resolution
         if [ "$LOGO_ENABLED" = "true" ] && [ -f "$LOGO_PATH" ]; then
             local logo_filter=$(build_logo_filter)
             if [ -n "$logo_filter" ]; then
                 output_params="$output_params $logo_filter"
             fi
+        else
+            # ✅ No logo: still scale video to target resolution for consistency
+            output_params="$output_params -vf \"scale=$RESOLUTION:force_original_aspect_ratio=decrease,pad=$RESOLUTION:(ow-iw)/2:(oh-ih)/2,setsar=1\""
         fi
         
         # Fast audio encoding
