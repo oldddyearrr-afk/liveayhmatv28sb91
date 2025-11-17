@@ -105,35 +105,28 @@ AUDIO_RATE="44100"  # Only used if re-encoding
 STREAMING_MODE="encode"
 
 # ═══════════════════════════════════════════════════════════
-# 4. Logo/Watermark Settings
+# 4. Watermark Text Settings (Scrolling Text)
 # ═══════════════════════════════════════════════════════════
-# NOTE: Logo only works when STREAMING_MODE="encode"
+# NOTE: Watermark only works when STREAMING_MODE="encode"
 
-# Enable logo overlay
-LOGO_ENABLED="true"  # true or false
+# Enable watermark text
+WATERMARK_ENABLED="true"  # true or false
 
-# Path to logo image file (PNG with transparency recommended)
-LOGO_PATH="channel_logo.png"
+# Watermark text content
+WATERMARK_TEXT="Your Channel Name - Subscribe Now! 🔴 LIVE"
 
-# Logo position: topleft, topright, bottomleft, bottomright
-LOGO_POSITION="topright"
+# Text appearance
+WATERMARK_FONTSIZE="30"
+WATERMARK_FONTCOLOR="white@0.85"
+WATERMARK_SHADOWCOLOR="black@0.3"
+WATERMARK_SHADOWX="1"
+WATERMARK_SHADOWY="1"
 
-# ════════════════════════════════════════════════════════════
-# موضع اللوجو - في أعلى اليمين تماماً فوق شعار القناة
-# ════════════════════════════════════════════════════════════
-# 
-# اللوجو سيظهر ملتصق بالحافة العليا، فوق شعار beIN SPORTS ✅
-# بعد 5 بكسل فقط من الحافة اليمنى، و 5 بكسل من الحافة العليا
-#
-LOGO_OFFSET_X="-30"     # 5 بكسل من الحافة اليمنى (ملتصق تقريباً)
-LOGO_OFFSET_Y="-38"     # 5 بكسل من الحافة العليا (ملتصق تقريباً)
+# Position (from bottom)
+WATERMARK_Y_OFFSET="40"  # pixels from bottom
 
-# Logo size (leave empty for original size, or specify like "200:100" for WxH)
-# Example: "350:-1" = 350px width, maintain aspect ratio
-LOGO_SIZE="360:-1"
-
-# Logo opacity (0.0 to 1.0, where 1.0 is fully opaque)
-LOGO_OPACITY="1.0"
+# Scroll speed (pixels per second)
+WATERMARK_SCROLL_SPEED="120"
 
 # ═══════════════════════════════════════════════════════════
 # 5. Performance Settings
@@ -225,51 +218,29 @@ get_quality_settings() {
 }
 
 # ═══════════════════════════════════════════════════════════
-# Function: Build Logo Filter
+# Function: Build Watermark Text Filter
 # ═══════════════════════════════════════════════════════════
 
-build_logo_filter() {
-    if [ "$LOGO_ENABLED" != "true" ]; then
+build_watermark_filter() {
+    if [ "$WATERMARK_ENABLED" != "true" ]; then
         echo ""
         return
     fi
     
-    if [ ! -f "$LOGO_PATH" ]; then
-        echo ""
-        return
-    fi
+    # Escape single quotes in text
+    local safe_text="${WATERMARK_TEXT//\'/\\\'}"
     
-    local position_filter=""
-    case $LOGO_POSITION in
-        topleft)
-            position_filter="x=$LOGO_OFFSET_X:y=$LOGO_OFFSET_Y"
-            ;;
-        topright)
-            position_filter="x=W-w-$LOGO_OFFSET_X:y=$LOGO_OFFSET_Y"
-            ;;
-        bottomleft)
-            position_filter="x=$LOGO_OFFSET_X:y=H-h-$LOGO_OFFSET_Y"
-            ;;
-        bottomright)
-            position_filter="x=W-w-$LOGO_OFFSET_X:y=H-h-$LOGO_OFFSET_Y"
-            ;;
-        *)
-            position_filter="x=W-w-$LOGO_OFFSET_X:y=$LOGO_OFFSET_Y"
-            ;;
-    esac
+    # Build drawtext filter with scrolling animation
+    local filter="-vf \"drawtext=text='${safe_text}'"
+    filter="${filter}:fontsize=${WATERMARK_FONTSIZE}"
+    filter="${filter}:fontcolor=${WATERMARK_FONTCOLOR}"
+    filter="${filter}:shadowcolor=${WATERMARK_SHADOWCOLOR}"
+    filter="${filter}:shadowx=${WATERMARK_SHADOWX}"
+    filter="${filter}:shadowy=${WATERMARK_SHADOWY}"
+    filter="${filter}:y=h-th-${WATERMARK_Y_OFFSET}"
+    filter="${filter}:x=w-mod(t*${WATERMARK_SCROLL_SPEED}\,w+tw)\""
     
-    local size_filter=""
-    if [ -n "$LOGO_SIZE" ]; then
-        size_filter="scale=$LOGO_SIZE,"
-    fi
-    
-    local opacity_filter=""
-    if [ "$LOGO_OPACITY" != "1.0" ]; then
-        opacity_filter="format=rgba,colorchannelmixer=aa=$LOGO_OPACITY,"
-    fi
-    
-    # Return only the filter, not the -i flag
-    echo "-filter_complex \"[1:v]${size_filter}${opacity_filter}format=rgba[logo];[0:v][logo]overlay=$position_filter\""
+    echo "$filter"
 }
 
 # ═══════════════════════════════════════════════════════════

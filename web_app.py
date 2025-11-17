@@ -41,15 +41,14 @@ def get_detailed_status():
         return {'state': 'ERROR', 'message': str(e), 'timestamp': None}
 
 def parse_config():
-    """Parse config.sh to get logo settings"""
+    """Parse config.sh to get watermark settings"""
     config = {
-        'logo_enabled': False,
-        'logo_path': 'channel_logo.png',
-        'logo_position': 'topright',
-        'logo_size': '350:-1',
-        'logo_opacity': '0.95',
-        'logo_offset_x': '20',
-        'logo_offset_y': '20',
+        'watermark_enabled': False,
+        'watermark_text': 'Your Channel Name',
+        'watermark_fontsize': '30',
+        'watermark_fontcolor': 'white@0.85',
+        'watermark_y_offset': '40',
+        'watermark_scroll_speed': '120',
         'streaming_mode': 'encode'
     }
     
@@ -58,13 +57,12 @@ def parse_config():
             content = f.read()
             
             patterns = {
-                'logo_enabled': r'LOGO_ENABLED="([^"]+)"',
-                'logo_path': r'LOGO_PATH="([^"]+)"',
-                'logo_position': r'LOGO_POSITION="([^"]+)"',
-                'logo_size': r'LOGO_SIZE="([^"]*)"',
-                'logo_opacity': r'LOGO_OPACITY="([^"]+)"',
-                'logo_offset_x': r'LOGO_OFFSET_X="([^"]+)"',
-                'logo_offset_y': r'LOGO_OFFSET_Y="([^"]+)"',
+                'watermark_enabled': r'WATERMARK_ENABLED="([^"]+)"',
+                'watermark_text': r'WATERMARK_TEXT="([^"]+)"',
+                'watermark_fontsize': r'WATERMARK_FONTSIZE="([^"]+)"',
+                'watermark_fontcolor': r'WATERMARK_FONTCOLOR="([^"]+)"',
+                'watermark_y_offset': r'WATERMARK_Y_OFFSET="([^"]+)"',
+                'watermark_scroll_speed': r'WATERMARK_SCROLL_SPEED="([^"]+)"',
                 'streaming_mode': r'STREAMING_MODE="([^"]+)"'
             }
             
@@ -73,7 +71,7 @@ def parse_config():
                 if match:
                     config[key] = match.group(1)
         
-        config['logo_enabled'] = config['logo_enabled'].lower() == 'true'
+        config['watermark_enabled'] = config['watermark_enabled'].lower() == 'true'
         
     except Exception as e:
         print(f"Error parsing config: {e}")
@@ -205,15 +203,7 @@ def api_logs():
 def api_logo_config():
     try:
         config = parse_config()
-        
-        logo_exists = os.path.exists(config['logo_path'])
-        config['logo_exists'] = logo_exists
-        
-        if logo_exists:
-            config['logo_url'] = f"/logo/{os.path.basename(config['logo_path'])}"
-        else:
-            config['logo_url'] = None
-            
+        # Keep watermark info for UI
         return jsonify(config)
     except Exception as e:
         return jsonify({'error': str(e)}), 500

@@ -201,7 +201,6 @@ fi
 build_ffmpeg_command() {
     local input_params=""
     local output_params=""
-    local logo_params=""
 
     # INPUT PARAMETERS (before -i)
     # ─────────────────────────────────────────────────────────
@@ -246,13 +245,8 @@ build_ffmpeg_command() {
         
     else
         # ═══════════════════════════════════════════════════════
-        # ENCODE MODE - Re-encode with logo overlay
+        # ENCODE MODE - Re-encode with watermark text
         # ═══════════════════════════════════════════════════════
-        
-        # Add logo input if enabled
-        if [ "$LOGO_ENABLED" = "true" ] && [ -f "$LOGO_PATH" ]; then
-            logo_params="-i \"$LOGO_PATH\""
-        fi
 
         # Fast video encoding for H.264
         output_params="$output_params -c:v $VIDEO_ENCODER"
@@ -265,11 +259,11 @@ build_ffmpeg_command() {
         # Fast encoding options
         output_params="$output_params -sc_threshold 0"
         
-        # Add logo filter if enabled
-        if [ "$LOGO_ENABLED" = "true" ] && [ -f "$LOGO_PATH" ]; then
-            local logo_filter=$(build_logo_filter)
-            if [ -n "$logo_filter" ]; then
-                output_params="$output_params $logo_filter"
+        # Add watermark text filter if enabled
+        if [ "$WATERMARK_ENABLED" = "true" ]; then
+            local watermark_filter=$(build_watermark_filter)
+            if [ -n "$watermark_filter" ]; then
+                output_params="$output_params $watermark_filter"
             fi
         fi
         
@@ -294,7 +288,7 @@ build_ffmpeg_command() {
     output_params="$output_params -rtmp_live live"
 
     # Return both parts separated by a marker
-    echo "INPUT:$input_params LOGO:$logo_params OUTPUT:$output_params"
+    echo "INPUT:$input_params OUTPUT:$output_params"
 }
 
 # ═══════════════════════════════════════════════════════════
@@ -322,8 +316,9 @@ display_stream_info() {
         echo -e "${BLUE}Key Interval:${NC} ${KEYINT}s (every $((FPS * KEYINT)) frames)"
         echo -e "${BLUE}Encoder:${NC} $VIDEO_ENCODER"
         
-        if [ "$LOGO_ENABLED" = "true" ] && [ -f "$LOGO_PATH" ]; then
-            echo -e "${BLUE}Logo:${NC} Enabled ($LOGO_POSITION, size: $LOGO_SIZE)"
+        if [ "$WATERMARK_ENABLED" = "true" ]; then
+            echo -e "${BLUE}Watermark:${NC} Scrolling text enabled"
+            echo -e "${BLUE}Text:${NC} $WATERMARK_TEXT"
         fi
     fi
 
@@ -343,12 +338,9 @@ start_stream() {
     log_info "Building FFmpeg command..."
     local FFMPEG_CMD=$(build_ffmpeg_command)
 
-    # Split input, logo and output parameters
+    # Split input and output parameters
     local INPUT_PARAMS="${FFMPEG_CMD#*INPUT:}"
-    INPUT_PARAMS="${INPUT_PARAMS%%LOGO:*}"
-    
-    local LOGO_PARAMS="${FFMPEG_CMD#*LOGO:}"
-    LOGO_PARAMS="${LOGO_PARAMS%%OUTPUT:*}"
+    INPUT_PARAMS="${INPUT_PARAMS%%OUTPUT:*}"
     
     local OUTPUT_PARAMS="${FFMPEG_CMD#*OUTPUT:}"
 
@@ -366,7 +358,7 @@ start_stream() {
     log_info "Starting stream..."
 
     # Build complete FFmpeg command
-    local FFMPEG_FULL_CMD="ffmpeg $INPUT_PARAMS -i \"$SOURCE\" $LOGO_PARAMS $OUTPUT_PARAMS \"$RTMP_URL\""
+    local FFMPEG_FULL_CMD="ffmpeg $INPUT_PARAMS -i \"$SOURCE\" $OUTPUT_PARAMS \"$RTMP_URL\""
     
     log_info "FFmpeg command ready"
     
