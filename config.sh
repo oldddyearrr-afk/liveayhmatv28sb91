@@ -9,7 +9,7 @@
 # ═══════════════════════════════════════════════════════════
 
 # Facebook Live Stream URL (DASH format)
-SOURCE="https://prod-fastly-eu-central-1.video.pscp.tv:443/Transcoding/v1/hls/46nxSDfa09rMtUJJ6VazshhCx_5sR7TrQpzts5pQUjzlyQeTJTkEUdOnTbKebirVBwzBUu39k5AuEKp2cAVWSQ/transcode/eu-central-1/periscope-replay-direct-prod-eu-central-1-public/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsInZlcnNpb24iOiIyIn0.eyJFbmNvZGVyU2V0dGluZyI6ImVuY29kZXJfc2V0dGluZ18xMDgwcDMwXzEwIiwiSGVpZ2h0IjoxMDgwLCJLYnBzIjo1NTAwLCJXaWR0aCI6MTkyMH0.OImMZabKYJ0cs9CnIapU-4aBk6KNBiJxi1hh-6l4BZ4/dynamic_highlatency.m3u8?type=live"
+SOURCE="http://hydratv.cc:80/live/aboud5d/57874g/415774.ts"
 
 # RTMP server for Facebook (Stream Key is fetched from environment variables for security)
 RTMP_SERVER="rtmps://live-api-s.facebook.com:443/rtmp/"
@@ -125,12 +125,12 @@ LOGO_POSITION="topright"
 # اللوجو سيظهر ملتصق بالحافة العليا، فوق شعار beIN SPORTS ✅
 # بعد 5 بكسل فقط من الحافة اليمنى، و 5 بكسل من الحافة العليا
 #
-LOGO_OFFSET_X="-6"     # 5 بكسل من الحافة اليمنى (ملتصق تقريباً)
-LOGO_OFFSET_Y="-6"     # 5 بكسل من الحافة العليا (ملتصق تقريباً)
+LOGO_OFFSET_X="-30"     # 5 بكسل من الحافة اليمنى (ملتصق تقريباً)
+LOGO_OFFSET_Y="-38"     # 5 بكسل من الحافة العليا (ملتصق تقريباً)
 
 # Logo size (leave empty for original size, or specify like "200:100" for WxH)
 # Example: "350:-1" = 350px width, maintain aspect ratio
-LOGO_SIZE="480:-1"
+LOGO_SIZE="360:-1"
 
 # Logo opacity (0.0 to 1.0, where 1.0 is fully opaque)
 LOGO_OPACITY="1.0"
