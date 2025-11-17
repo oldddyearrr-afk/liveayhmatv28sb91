@@ -123,6 +123,13 @@ def api_status():
 def api_start():
     import time
     try:
+        # Get stream key from request
+        data = request.get_json() or {}
+        stream_key = data.get('stream_key', '').strip()
+        
+        if not stream_key:
+            return jsonify({'success': False, 'error': 'Stream Key is required'}), 400
+        
         # Check if already running and stop it immediately
         if get_stream_status():
             subprocess.run(['tmux', 'kill-session', '-t', 'fbstream'], 
@@ -138,6 +145,10 @@ def api_start():
             subprocess.Popen(['bash', 'cleanup_logs.sh'], 
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         
+        # Prepare environment with stream key
+        env = os.environ.copy()
+        env['FB_STREAM_KEY'] = stream_key
+        
         # Start stream directly using main.sh (inherit stdio to avoid buffer blocking)
         process = subprocess.Popen(
             ['bash', 'main.sh'],
@@ -145,7 +156,7 @@ def api_start():
             stderr=subprocess.DEVNULL,
             start_new_session=True,
             cwd=os.path.dirname(os.path.abspath(__file__)),
-            env=os.environ.copy()
+            env=env
         )
         
         # Wait for status file to report STREAMING or FAILED (max 20 seconds)

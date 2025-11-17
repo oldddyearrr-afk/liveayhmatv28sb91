@@ -347,6 +347,18 @@
             <div id="log-file" class="info-line"></div>
         </div>
         
+        <div class="stream-key-section">
+            <label for="stream-key-input" style="display: block; margin-bottom: 8px; font-weight: 500; color: #495057;">
+                🔑 Facebook Stream Key:
+            </label>
+            <input 
+                type="text" 
+                id="stream-key-input" 
+                placeholder="أدخل Stream Key من Facebook Creator Studio"
+                style="width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.95em; margin-bottom: 15px;"
+            />
+        </div>
+        
         <div class="buttons">
             <button id="btn-refresh" class="btn-refresh" onclick="loadLogoPreview()">
                 🔄 تحديث معاينة اللوجو
@@ -511,13 +523,26 @@
         }
         
         async function startStream() {
+            const streamKey = document.getElementById('stream-key-input').value.trim();
+            
+            if (!streamKey) {
+                showAlert('⚠️ يرجى إدخال Stream Key أولاً!', 'error');
+                return;
+            }
+            
             const btn = document.getElementById('btn-start');
             const originalText = btn.innerHTML;
             btn.innerHTML = '<span class="loader"></span> جاري التشغيل...';
             btn.disabled = true;
             
             try {
-                const res = await fetch('/api/start', { method: 'POST' });
+                const res = await fetch('/api/start', { 
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ stream_key: streamKey })
+                });
                 const data = await res.json();
                 
                 if (data.success) {
