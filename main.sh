@@ -284,7 +284,7 @@ build_ffmpeg_command() {
         output_params="$output_params -flvflags no_duration_filesize+no_metadata"
 
         # Fast sync and timing (async removed for modern FFmpeg compatibility)
-        output_params="$output_params -vsync passthrough"
+        output_params="$output_params -fps_mode passthrough"
         output_params="$output_params -copytb 1"
 
         # Optimized buffer settings
