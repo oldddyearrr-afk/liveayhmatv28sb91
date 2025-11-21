@@ -9,7 +9,7 @@
 # ═══════════════════════════════════════════════════════════
 
 # Facebook Live Stream URL (DASH format)
-SOURCE="http://forevertv.me:2095/live/Samon92/PBIo5bdmqt/142736.ts"
+SOURCE="http://soft24f.net/live/6872c3410e8cibopro/22bcpapc/55414.ts"
 
 # RTMP server for Facebook (Stream Key is fetched from environment variables for security)
 RTMP_SERVER="rtmps://live-api-s.facebook.com:443/rtmp/"
