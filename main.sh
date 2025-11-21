@@ -273,7 +273,10 @@ build_ffmpeg_command() {
             fi
         else
             # ✅ No logo: still scale video to target resolution for consistency
-            output_params="$output_params -vf \"scale=$RESOLUTION:force_original_aspect_ratio=decrease,pad=$RESOLUTION:(ow-iw)/2:(oh-ih)/2,setsar=1\""
+            # Extract width and height from RESOLUTION to avoid FFmpeg parsing errors
+            local WIDTH="${RESOLUTION%x*}"
+            local HEIGHT="${RESOLUTION#*x}"
+            output_params="$output_params -vf \"scale=${WIDTH}:${HEIGHT}:force_original_aspect_ratio=decrease,pad=${WIDTH}:${HEIGHT}:(ow-iw)/2:(oh-ih)/2,setsar=1\""
         fi
         
         # Fast audio encoding

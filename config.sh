@@ -239,6 +239,10 @@ build_logo_filter() {
         return
     fi
     
+    # Extract width and height from RESOLUTION (e.g., "1920x1080")
+    local WIDTH="${RESOLUTION%x*}"
+    local HEIGHT="${RESOLUTION#*x}"
+    
     local position_filter=""
     case $LOGO_POSITION in
         topleft)
@@ -268,9 +272,9 @@ build_logo_filter() {
         opacity_filter="format=rgba,colorchannelmixer=aa=$LOGO_OPACITY,"
     fi
     
-    # ✅ NEW: Scale video to target resolution FIRST, then add logo
-    # This ensures logo position stays consistent regardless of source resolution
-    echo "-filter_complex \"[0:v]scale=$RESOLUTION:force_original_aspect_ratio=decrease,pad=$RESOLUTION:(ow-iw)/2:(oh-ih)/2,setsar=1[scaled];[1:v]${size_filter}${opacity_filter}format=rgba[logo];[scaled][logo]overlay=$position_filter\""
+    # ✅ Scale video to target resolution FIRST, then add logo
+    # Using separated WIDTH and HEIGHT variables to avoid FFmpeg parsing errors
+    echo "-filter_complex \"[0:v]scale=${WIDTH}:${HEIGHT}:force_original_aspect_ratio=decrease,pad=${WIDTH}:${HEIGHT}:(ow-iw)/2:(oh-ih)/2,setsar=1[scaled];[1:v]${size_filter}${opacity_filter}format=rgba[logo];[scaled][logo]overlay=$position_filter\""
 }
 
 # ═══════════════════════════════════════════════════════════
