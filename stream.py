@@ -191,17 +191,9 @@ class StreamManager:
             '-ac', '2',
             '-strict', 'experimental',
             
-            # RTMP settings - محسّنة لفيسبوك
+            # RTMP settings - مبسطة لفيسبوك
             '-f', 'flv',
             '-flvflags', 'no_duration_filesize',
-            
-            # إعدادات اتصال RTMP حاسمة!
-            '-rtmp_live', 'live',
-            '-rtmp_buffer', '1000',
-            '-rtmp_conn', 'S:' + stream_key,
-            
-            # TCP وقت الانتظار
-            '-timeout', '5000000',
             
             full_rtmp_url
         ])
