@@ -208,12 +208,15 @@ class StreamManager:
                     self.process = None
                     self.is_running = False
                     
-                    if "Cannot read RTMP handshake" in stderr or "Error opening output" in stderr:
+                    if "401" in stderr or "403" in stderr or "Unauthorized" in stderr:
+                        if "input" in stderr.lower() or "opening input" in stderr.lower():
+                            return False, "❌ رابط M3U8 غير صالح أو انتهى!\n\n🔍 الأسباب:\n• الرابط انتهت صلاحيته\n• الرابط يحتاج تحديث\n\n💡 احصل على رابط M3U8 جديد وحاول مرة أخرى."
+                        else:
+                            return False, "❌ Stream Key غير مصرح!\n\nاحصل على Stream Key جديد من فيسبوك."
+                    elif "Cannot read RTMP handshake" in stderr or "Error opening output" in stderr:
                         return False, "❌ فشل الاتصال بفيسبوك!\n\n🔍 الأسباب المحتملة:\n• Stream Key خاطئ أو منتهي\n• فيسبوك لم يبدأ استقبال البث بعد\n• حاول احصل على Stream Key جديد\n\n💡 تأكد أن صفحة 'Go Live' مفتوحة قبل البث!"
                     elif "Connection refused" in stderr or "timed out" in stderr:
                         return False, "❌ مشكلة اتصال!\n\nتحقق من الإنترنت وحاول مرة أخرى."
-                    elif "401" in stderr or "403" in stderr:
-                        return False, "❌ Stream Key غير مصرح!\n\nاحصل على Stream Key جديد من فيسبوك."
                     else:
                         return False, f"❌ فشل البث.\n\nالخطأ: {stderr[:150]}"
             
