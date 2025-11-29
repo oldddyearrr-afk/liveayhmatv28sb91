@@ -1,5 +1,6 @@
 { pkgs }: {
   deps = [
+    pkgs.stunnel
     pkgs.tmux
     pkgs.ffmpeg
     pkgs.pkg
