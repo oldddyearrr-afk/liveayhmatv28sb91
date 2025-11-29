@@ -76,38 +76,46 @@ verifyChain = no
         """بناء أمر FFmpeg - يستخدم stunnel على المنفذ 19350"""
         rtmp_url = f"rtmp://127.0.0.1:19350/rtmp/{stream_key}"
         
+        is_ts_stream = '.ts' in m3u8_url or 'mpegts' in m3u8_url.lower() or '?' in m3u8_url and 'm3u8' not in m3u8_url.lower()
+        
         command = [
             config.FFMPEG_CMD,
             '-hide_banner',
-            '-loglevel', 'info',
+            '-loglevel', 'warning',
+        ]
+        
+        if not is_ts_stream:
+            command.extend([
+                '-reconnect', '1',
+                '-reconnect_streamed', '1', 
+                '-reconnect_at_eof', '1',
+                '-reconnect_delay_max', '5',
+            ])
+        
+        command.extend([
+            '-rw_timeout', '30000000',
+            '-timeout', '30000000',
+            '-analyzeduration', '10000000',
+            '-probesize', '20000000',
+            '-fflags', '+genpts+igndts',
+            '-err_detect', 'ignore_err',
             
-            '-reconnect', '1',
-            '-reconnect_streamed', '1',
-            '-reconnect_at_eof', '1',
-            '-reconnect_delay_max', '5',
-            
-            '-rw_timeout', '20000000',
-            '-timeout', '20000000',
-            '-analyzeduration', '5000000',
-            '-probesize', '10000000',
-            '-fflags', '+genpts',
-            
-            '-headers', 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\r\nOrigin: https://twitter.com\r\nReferer: https://twitter.com/\r\n',
+            '-headers', 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\r\n',
             
             '-i', m3u8_url,
-        ]
+        ])
         
         if logo_path and os.path.exists(logo_path):
             command.extend(['-i', logo_path])
             command.extend([
                 '-filter_complex', '[1:v]format=rgba,scale=100:-1[logo];[0:v][logo]overlay=W-w-20:20[outv]',
                 '-map', '[outv]',
-                '-map', '0:a',
+                '-map', '0:a?',
             ])
         else:
             command.extend([
-                '-map', '0:v',
-                '-map', '0:a',
+                '-map', '0:v:0',
+                '-map', '0:a:0?',
             ])
         
         command.extend([
@@ -119,20 +127,23 @@ verifyChain = no
             '-pix_fmt', 'yuv420p',
             
             '-r', '30',
-            '-vsync', 'cfr',
+            '-fps_mode', 'cfr',
             
             '-b:v', '4000k',
             '-maxrate', '4500k',
-            '-bufsize', '8000k',
+            '-bufsize', '12000k',
             '-g', '60',
             '-keyint_min', '30',
+            '-x264opts', 'no-scenecut',
             
             '-c:a', 'aac',
             '-b:a', '128k',
             '-ar', '44100',
             '-ac', '2',
+            '-async', '1',
             
-            '-max_muxing_queue_size', '2048',
+            '-max_muxing_queue_size', '4096',
+            '-thread_queue_size', '1024',
             '-f', 'flv',
             '-flvflags', 'no_duration_filesize',
             
