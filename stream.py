@@ -212,30 +212,45 @@ class StreamManager:
                 bufsize=1
             )
             
-            # انتظار أطول للتحقق من الاتصال بفيسبوك
+            # انتظار للتحقق من الاتصال بفيسبوك
             logger.info("⏳ فحص الاتصال بفيسبوك...")
-            time.sleep(12)
             
-            # التحقق الحقيقي من نجاح البث
+            # فحص متعدد المراحل
+            for attempt in range(3):
+                time.sleep(5)
+                
+                # فحص إذا العملية ماتت
+                if self.process.poll() is not None:
+                    stderr = self.process.stderr.read() if self.process.stderr else "لا توجد تفاصيل"
+                    logger.error(f"❌ FFmpeg فشل: {stderr[:300]}")
+                    
+                    self.process = None
+                    self.is_running = False
+                    
+                    # تحليل الأخطاء
+                    if "Cannot read RTMP handshake" in stderr or "Error opening output" in stderr:
+                        return False, "❌ فشل الاتصال بفيسبوك!\n\n🔍 الأسباب المحتملة:\n• Stream Key خاطئ أو منتهي\n• فيسبوك لم يبدأ استقبال البث بعد\n• حاول احصل على Stream Key جديد\n\n💡 تأكد أن صفحة 'Go Live' مفتوحة قبل البث!"
+                    elif "Connection refused" in stderr or "timed out" in stderr:
+                        return False, "❌ مشكلة اتصال!\n\nتحقق من الإنترنت وحاول مرة أخرى."
+                    elif "401" in stderr or "403" in stderr:
+                        return False, "❌ Stream Key غير مصرح!\n\nاحصل على Stream Key جديد من فيسبوك."
+                    else:
+                        return False, f"❌ فشل البث.\n\nالخطأ: {stderr[:150]}"
+            
+            # إذا وصلنا هنا، العملية مازالت شغالة بعد 15 ثانية
             if self.process.poll() is None:
-                # قراءة أي تحذيرات
+                # فحص آخر للـ stderr
                 try:
-                    stderr_data = self.process.stderr.read(500)
-                    if stderr_data and len(stderr_data) > 0:
-                        logger.warning(f"⚠️ رسائل FFmpeg: {stderr_data[:200]}")
-                        
-                        # فحص أخطاء شائعة
-                        if "Connection refused" in stderr_data or "timed out" in stderr_data:
-                            self.process.kill()
-                            return False, "❌ فشل الاتصال بفيسبوك!\n\nتحقق من:\n• Stream Key صحيح؟\n• الإنترنت متصل؟\n• فيسبوك لم يحظر البث؟"
-                        
-                        if "401" in stderr_data or "403" in stderr_data:
-                            self.process.kill()
-                            return False, "❌ Stream Key خاطئ أو منتهي!\n\nاحصل على Stream Key جديد من فيسبوك."
+                    import select
+                    if select.select([self.process.stderr], [], [], 0)[0]:
+                        stderr_check = self.process.stderr.read(300)
+                        if stderr_check and ("Error" in stderr_check or "Cannot" in stderr_check):
+                            logger.warning(f"⚠️ تحذيرات: {stderr_check[:150]}")
+                            # لكن العملية مازالت شغالة، نكمل
                 except:
                     pass
                 
-                # الآن فقط نعين is_running = True بعد التأكد
+                # الآن فقط نعين is_running = True بعد التأكد الكامل
                 self.is_running = True
                 
                 # بدء مراقبة العملية
