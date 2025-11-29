@@ -1,6 +1,7 @@
 import subprocess
 import logging
 import config
+from config import LOGO_POSITION, parse_logo_position
 import os
 import time
 import threading
@@ -108,7 +109,6 @@ verifyChain = no
         if logo_path and os.path.exists(logo_path):
             command.extend(['-i', logo_path])
             # Use parse_logo_position to convert simple xp format to FFmpeg format
-            from config import LOGO_POSITION, parse_logo_position
             overlay_pos = parse_logo_position(LOGO_POSITION)
             command.extend([
                 '-filter_complex', f'[1:v]format=rgba,scale=480:-1[logo];[0:v][logo]overlay={overlay_pos}[outv]',
