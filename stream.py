@@ -121,15 +121,14 @@ class StreamManager:
             '-reconnect_delay_max', '15',
             '-multiple_requests', '1',
             
-            '-analyzeduration', '15000000',
-            '-probesize', '15000000',
+            '-analyzeduration', '20000000',
+            '-probesize', '20000000',
             
             '-re',
-            '-fflags', '+genpts+igndts',
+            '-fflags', '+genpts+igndts+discardcorrupt',
             '-avoid_negative_ts', 'make_zero',
             
-            '-user_agent', config.USER_AGENT,
-            '-referer', 'https://www.google.com/',
+            '-headers', 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\r\nAccept: */*\r\nOrigin: https://twitter.com\r\nReferer: https://twitter.com/\r\n',
             
             '-i', m3u8_url
         ]
