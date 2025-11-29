@@ -144,19 +144,12 @@ class StreamManager:
             filter_complex = (
                 f"[1:v]format=rgba,colorchannelmixer=aa={logo_opacity}[logo_opacity];"
                 f"[0:v][logo_opacity]overlay=W-w-{random_x}:{random_y}:format=auto,"
-                f"drawtext=text='%{{localtime\\:%H\\:%M}}':x=15:y=H-th-15:"
-                f"fontsize=18:fontcolor=white@0.5:shadowcolor=black@0.3:shadowx=1:shadowy=1,"
                 f"format=yuv420p[outv]"
             )
             command.extend(['-filter_complex', filter_complex])
             command.extend(['-map', '[outv]', '-map', '0:a'])
         else:
-            filter_v = (
-                f"drawtext=text='%{{localtime\\:%H\\:%M}}':x=15:y=H-th-15:"
-                f"fontsize=18:fontcolor=white@0.5:shadowcolor=black@0.3:shadowx=1:shadowy=1,"
-                f"format=yuv420p"
-            )
-            command.extend(['-vf', filter_v])
+            command.extend(['-pix_fmt', 'yuv420p'])
 
         command.extend([
             '-c:v', 'libx264',
