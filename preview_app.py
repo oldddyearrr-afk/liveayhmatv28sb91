@@ -4,15 +4,17 @@ import socketserver
 import os
 import json
 import config
-from pathlib import Path
+import socket
 
 PORT = 5000
+
+socketserver.TCPServer.allow_reuse_address = True
 
 class PreviewHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path == '/':
             self.send_response(200)
-            self.send_header('Content-type', 'text/html')
+            self.send_header('Content-type', 'text/html; charset=utf-8')
             self.end_headers()
             with open('templates/preview.html', 'r', encoding='utf-8') as f:
                 html = f.read()
@@ -43,7 +45,6 @@ class PreviewHandler(http.server.SimpleHTTPRequestHandler):
 
 if __name__ == '__main__':
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    Handler = PreviewHandler
-    with socketserver.TCPServer(("0.0.0.0", PORT), Handler) as httpd:
-        print(f"معاينة اللوجو تعمل على http://localhost:{PORT}")
+    with socketserver.TCPServer(("0.0.0.0", PORT), PreviewHandler) as httpd:
+        print(f"معاينة اللوجو تعمل على http://0.0.0.0:{PORT}")
         httpd.serve_forever()
