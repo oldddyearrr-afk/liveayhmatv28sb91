@@ -17,26 +17,23 @@ FACEBOOK_RTMP_URL = "rtmps://live-api-s.facebook.com:443/rtmp/"
 # Logging Settings
 LOG_FILE = "stream_bot.log"
 
-# ═══════════════════════════════════════════════════════════
-# 🎨 LOGO SETTINGS - اعدادات اللوجو
-# ═══════════════════════════════════════════════════════════
+# Logo Position Settings (Simple XP Format)
+# Format: "Xxp:Yyp" where X is horizontal offset (px from right), Y is vertical offset (px from top)
+# Examples: "-4xp:-13yp", "-10xp:5yp", "0xp:0yp"
+LOGO_POSITION = "-8xp:-13yp"  # Default: 4px from right, 13px from top
 
-# الموضع الأفقي (من اليمين)
-# أرقام سالبة = من اليمين ، أرقام موجبة = من اليسار
-# مثال: -27 = 27 بكسل من اليمين
-LOGO_OFFSET_X = "-27"
-
-# الموضع العمودي (من الأعلى)  
-# أرقام سالبة = فوق الشاشة ، أرقام موجبة = تحت
-# مثال: -36 = 36 بكسل فوق الأعلى
-LOGO_OFFSET_Y = "-36"
-
-# حجم اللوجو (العرض والارتفاع)
-# "480:-1" = عرض 480 بكسل مع الحفاظ على النسبة
-# "300:-1" = عرض 300 بكسل (أصغر)
-# "600:-1" = عرض 600 بكسل (أكبر)
-LOGO_SIZE = "480:-1"
-
-# شفافية اللوجو (0.0 = شفاف تماماً, 1.0 = معتم تماماً)
-# مثال: 0.8 = 80% معتم
-LOGO_OPACITY = "1.0"
+def parse_logo_position(pos_str):
+    """Convert simple xp format to FFmpeg overlay filter
+    Input: "-32xp:5yp" or similar
+    Output: "main_w-overlay_w-32:5"
+    """
+    try:
+        parts = pos_str.split(':')
+        x = int(parts[0].replace('xp', '').strip()) if 'xp' in parts[0] else 0
+        y = int(parts[1].replace('yp', '').strip()) if len(parts) > 1 and 'yp' in parts[1] else 0
+        
+        # Convert to FFmpeg format: main_w-overlay_w-X:Y
+        ffmpeg_x = f"main_w-overlay_w-({x})" if x < 0 else f"main_w-overlay_w+{x}"
+        return f"{ffmpeg_x}:{y}"
+    except:
+        return "main_w-overlay_w-4:-13"  # Fallback to default
