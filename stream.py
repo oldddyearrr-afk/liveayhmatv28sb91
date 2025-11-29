@@ -5,6 +5,8 @@ import os
 import time
 import threading
 import signal
+import random
+from anti_detection import AntiDetection
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +19,7 @@ class StreamManager:
         self.reconnect_attempts = 0
         self.max_reconnect_attempts = 50
         self.last_command = None
+        self.anti_detect = AntiDetection()
 
     def start_stunnel(self):
         """بدء stunnel للاتصال الآمن بفيسبوك"""
@@ -43,15 +46,15 @@ verifyChain = no
             time.sleep(2)
             
             if self.stunnel_process.poll() is None:
-                logger.info("stunnel بدأ بنجاح على المنفذ 19350")
+                logger.info("✅ stunnel بدأ بنجاح على المنفذ 19350")
                 return True
             else:
                 stderr = self.stunnel_process.stderr.read().decode('utf-8', errors='ignore')
-                logger.error(f"stunnel فشل: {stderr}")
+                logger.error(f"❌ stunnel فشل: {stderr}")
                 return False
                 
         except Exception as e:
-            logger.error(f"خطأ في stunnel: {e}")
+            logger.error(f"❌ خطأ في stunnel: {e}")
             return False
 
     def stop_stunnel(self):
@@ -73,8 +76,11 @@ verifyChain = no
             pass
 
     def build_ffmpeg_command(self, m3u8_url, stream_key, logo_path=None):
-        """بناء أمر FFmpeg - يستخدم stunnel على المنفذ 19350"""
+        """بناء أمر FFmpeg مع تقنيات تجنب الكشف"""
         rtmp_url = f"rtmp://127.0.0.1:19350/rtmp/{stream_key}"
+        
+        # الحصول على معاملات عشوائية لتجنب الكشف
+        anti_params = self.anti_detect.randomize_ffmpeg_params()
         
         is_ts_stream = '.ts' in m3u8_url or 'mpegts' in m3u8_url.lower() or '?' in m3u8_url and 'm3u8' not in m3u8_url.lower()
         
@@ -89,7 +95,7 @@ verifyChain = no
                 '-reconnect', '1',
                 '-reconnect_streamed', '1', 
                 '-reconnect_at_eof', '1',
-                '-reconnect_delay_max', '5',
+                '-reconnect_delay_max', str(random.randint(3, 8)),  # تأخير عشوائي
             ])
         
         command.extend([
@@ -100,14 +106,14 @@ verifyChain = no
             '-fflags', '+genpts+igndts+discardcorrupt',
             '-err_detect', 'ignore_err+aggressive',
             
-            '-headers', 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\r\n',
+            # User-Agent عشوائي لتجنب الكشف
+            '-headers', f'User-Agent: {anti_params["user_agent"]}\r\n',
             
             '-i', m3u8_url,
         ])
         
         if logo_path and os.path.exists(logo_path):
             command.extend(['-i', logo_path])
-            # Build FFmpeg filter with logo positioning, size, and opacity
             x_offset = config.LOGO_OFFSET_X
             y_offset = config.LOGO_OFFSET_Y
             logo_size = config.LOGO_SIZE
@@ -125,31 +131,36 @@ verifyChain = no
         
         command.extend([
             '-c:v', 'libx264',
-            '-preset', 'ultrafast',
+            '-preset', anti_params['preset'],
             '-tune', 'zerolatency',
             '-profile:v', 'baseline',
             '-level', '3.0',
             '-pix_fmt', 'yuv420p',
             
-            '-r', '30',
+            '-r', str(random.randint(25, 30)),  # معدل إطارات عشوائي قليلاً
             '-fps_mode', 'cfr',
             
-            '-b:v', '3500k',
-            '-maxrate', '4000k',
-            '-bufsize', '6000k',
-            '-g', '30',
-            '-keyint_min', '15',
-            '-x264opts', 'no-scenecut:aq-mode=0',
+            '-b:v', anti_params['bitrate'],  # معدل بت عشوائي
+            '-maxrate', str(int(anti_params['bitrate'].rstrip('k')) + 500) + 'k',
+            '-bufsize', anti_params['bufsize'],  # حجم تخزين مؤقت عشوائي
+            '-g', anti_params['gop'],  # GOP عشوائي
+            '-keyint_min', str(random.randint(12, 18)),
+            '-x264opts', 'no-scenecut:aq-mode=0:vbv-maxrate=' + anti_params['bitrate'].rstrip('k') + ':vbv-bufsize=' + anti_params['bufsize'].rstrip('k'),
             
             '-c:a', 'aac',
-            '-b:a', '96k',
-            '-ar', '44100',
+            '-b:a', str(random.choice([96, 128])) + 'k',
+            '-ar', str(random.choice([44100, 48000])),
             '-ac', '2',
             
-            '-max_muxing_queue_size', '512',
-            '-thread_queue_size', '128',
+            '-max_muxing_queue_size', str(random.randint(256, 512)),
+            '-thread_queue_size', str(random.randint(64, 256)),
             '-f', 'flv',
             '-flvflags', 'no_duration_filesize',
+            
+            # معاملات إضافية لتجنب الكشف
+            '-rtbufsize', '1M',
+            '-fflags', '+genpts+discardcorrupt+igndts',
+            '-bsf:v', 'extract_extradata=remove_trailing_0',
             
             rtmp_url
         ])
@@ -164,18 +175,18 @@ verifyChain = no
             if self.process.poll() is not None:
                 self.reconnect_attempts += 1
                 consecutive_failures += 1
-                logger.warning(f"البث توقف! محاولة {self.reconnect_attempts}/{self.max_reconnect_attempts}")
+                logger.warning(f"⚠️ البث توقف! محاولة {self.reconnect_attempts}/{self.max_reconnect_attempts}")
                 
                 if self.reconnect_attempts < self.max_reconnect_attempts:
                     wait_time = min(2 * consecutive_failures, 10)
                     time.sleep(wait_time)
                     
                     if consecutive_failures >= 3:
-                        logger.info("إعادة تشغيل stunnel...")
+                        logger.info("🔄 إعادة تشغيل stunnel...")
                         self.stop_stunnel()
                         time.sleep(1)
                         if not self.start_stunnel():
-                            logger.error("فشل إعادة تشغيل stunnel")
+                            logger.error("❌ فشل إعادة تشغيل stunnel")
                             continue
                     
                     if self.is_running and self.last_command:
@@ -185,14 +196,14 @@ verifyChain = no
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE
                             )
-                            logger.info("تم إعادة الاتصال بنجاح")
+                            logger.info("✅ تم إعادة الاتصال بنجاح")
                             time.sleep(5)
                             if self.process.poll() is None:
                                 consecutive_failures = 0
                         except Exception as e:
-                            logger.error(f"فشل إعادة الاتصال: {e}")
+                            logger.error(f"❌ فشل إعادة الاتصال: {e}")
                 else:
-                    logger.error("تم الوصول للحد الأقصى من المحاولات")
+                    logger.error("❌ تم الوصول للحد الأقصى من المحاولات")
                     self.is_running = False
                     self.stop_stunnel()
                     break
@@ -202,24 +213,31 @@ verifyChain = no
             time.sleep(3)
 
     def start_stream(self, m3u8_url, rtmp_url, stream_key, logo_path=None):
-        """بدء البث"""
+        """بدء البث مع تقنيات تجنب الكشف"""
         if self.process and self.process.poll() is None:
-            return False, "البث يعمل بالفعل! استخدم /stop أولاً."
+            return False, "⚠️ البث يعمل بالفعل! استخدم /stop أولاً."
         
         self.is_running = False
         self.process = None
         self.reconnect_attempts = 0
         
-        logger.info("بدء stunnel...")
+        logger.info("🔐 تفعيل حيل تجنب الكشف...")
+        self.anti_detect.apply_stream_spacing()
+        
+        # تأخير عشوائي قبل الاتصال
+        logger.info("⏳ تأخير عشوائي قبل الاتصال (لتجنب الكشف)...")
+        time.sleep(random.uniform(2, 5))
+        
+        logger.info("🚀 بدء stunnel...")
         if not self.start_stunnel():
             return False, "❌ فشل تشغيل الاتصال الآمن!\n\nحاول مرة أخرى."
         
         command = self.build_ffmpeg_command(m3u8_url, stream_key, logo_path)
         self.last_command = command
         
-        logger.info(f"بدء البث...")
-        logger.info(f"المصدر: {m3u8_url[:60]}...")
-        logger.info(f"Stream Key: {stream_key[:15]}...")
+        logger.info(f"📺 بدء البث مع تقنيات متقدمة...")
+        logger.info(f"📍 المصدر: {m3u8_url[:60]}...")
+        logger.info(f"🔑 Stream Key: {stream_key[:15]}...")
         
         try:
             log_file = open('/tmp/ffmpeg_output.log', 'w')
@@ -229,8 +247,8 @@ verifyChain = no
                 stderr=subprocess.STDOUT
             )
             
-            logger.info(f"FFmpeg بدأ بـ PID: {self.process.pid}")
-            logger.info(f"الأمر: {' '.join(command[:10])}...")
+            logger.info(f"✅ FFmpeg بدأ بـ PID: {self.process.pid}")
+            logger.info(f"🛡️ حيل التجنب فعالة")
             
             time.sleep(8)
             
@@ -242,7 +260,7 @@ verifyChain = no
                 except:
                     pass
                 
-                logger.error(f"FFmpeg فشل: {stderr[:500]}")
+                logger.error(f"❌ FFmpeg فشل: {stderr[:500]}")
                 self.process = None
                 self.stop_stunnel()
                 
@@ -263,10 +281,10 @@ verifyChain = no
             self.monitor_thread = threading.Thread(target=self.monitor_process, daemon=True)
             self.monitor_thread.start()
             
-            return True, "✅ البث يعمل!\n\n📺 افتح صفحة البث في فيسبوك.\n⏱️ انتظر 10-30 ثانية لظهور الفيديو.\n\nاستخدم /stop لإيقاف البث."
+            return True, "✅ البث يعمل!\n\n🛡️ حيل التجنب مفعلة\n📺 افتح صفحة البث في فيسبوك.\n⏱️ انتظر 10-30 ثانية لظهور الفيديو.\n\nاستخدم /stop لإيقاف البث."
             
         except Exception as e:
-            logger.error(f"خطأ: {e}")
+            logger.error(f"❌ خطأ: {e}")
             self.process = None
             self.stop_stunnel()
             return False, f"❌ خطأ: {str(e)}"
@@ -300,5 +318,5 @@ verifyChain = no
         """حالة مفصلة"""
         status = self.get_status()
         if status['active']:
-            return f"✅ البث نشط\n📊 إعادة الاتصال: {status['reconnect_attempts']}/{self.max_reconnect_attempts}"
+            return f"✅ البث نشط 🛡️\n📊 إعادة الاتصال: {status['reconnect_attempts']}/{self.max_reconnect_attempts}\n🔐 حيل التجنب: مفعلة"
         return "❌ البث متوقف"
