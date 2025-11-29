@@ -15,15 +15,6 @@ expertMode = true
 runButton = "Project"
 
 [[workflows.workflow]]
-name = "Project"
-mode = "parallel"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Telegram Bot"
-
-[[workflows.workflow]]
 name = "Web UI"
 author = 49759065
 mode = "sequential"
@@ -33,23 +24,29 @@ task = "shell.exec"
 args = "python3 web_app.py"
 
 [[workflows.workflow]]
-name = "Telegram Bot"
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Logo Preview"
+
+[[workflows.workflow]]
+name = "Logo Preview"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python bot.py"
+args = "python preview_app.py"
+waitForPort = 5000
 
 [workflows.workflow.metadata]
-outputType = "console"
+outputType = "webview"
 
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 36493
-externalPort = 3002
 
 [[ports]]
 localPort = 40499

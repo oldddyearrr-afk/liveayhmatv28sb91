@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>معاينة اللوجو - Logo Preview</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #1a1a1a;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            display: flex;
+            gap: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            display: flex;
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        
+        .preview-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .preview-box {
+            background: #000;
+            border: 2px solid #444;
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            overflow: hidden;
+            border-radius: 8px;
+        }
+        
+        .stream-background {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: rgba(255,255,255,0.3);
+        }
+        
+        .logo {
+            position: absolute;
+            width: 150px;
+            height: auto;
+        }
+        
+        .logo img {
+            width: 100%;
+            height: auto;
+        }
+        
+        .controls-section {
+            width: 320px;
+            background: #222;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            height: fit-content;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        label {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #aaa;
+            font-weight: bold;
+        }
+        
+        input[type="number"],
+        input[type="range"] {
+            padding: 8px;
+            background: #333;
+            border: 1px solid #555;
+            color: #fff;
+            border-radius: 4px;
+        }
+        
+        input[type="number"]:focus,
+        input[type="range"]:focus {
+            outline: none;
+            border-color: #66bb6a;
+        }
+        
+        .value-display {
+            font-size: 12px;
+            color: #66bb6a;
+            font-weight: bold;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 10px;
+            background: #66bb6a;
+            color: #000;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        button:hover {
+            background: #81c784;
+        }
+        
+        button.reset {
+            background: #ff6b6b;
+            color: #fff;
+        }
+        
+        button.reset:hover {
+            background: #ff8787;
+        }
+        
+        .info {
+            font-size: 11px;
+            color: #888;
+            padding: 10px;
+            background: #2a2a2a;
+            border-left: 3px solid #66bb6a;
+            border-radius: 4px;
+        }
+        
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .controls-section {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="preview-section">
+            <h2 style="margin-bottom: 10px;">🎬 معاينة اللوجو على البث</h2>
+            <div class="preview-box">
+                <div class="stream-background">
+                    📺 شاشة البث
+                </div>
+                <div class="logo" id="logoPreview">
+                    <img src="/static/logo.png" alt="Logo">
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls-section">
+            <h3>⚙️ إعدادات اللوجو</h3>
+            
+            <div class="control-group">
+                <label>الموضع الأفقي (X)</label>
+                <input type="number" id="offsetX" min="-200" max="200" value="{{ offset_x }}">
+                <span class="value-display" id="valueX">{{ offset_x }}px</span>
+                <small style="color: #666; font-size: 10px;">سالب = لليمين | موجب = لليسار</small>
+            </div>
+            
+            <div class="control-group">
+                <label>الموضع العمودي (Y)</label>
+                <input type="number" id="offsetY" min="-200" max="200" value="{{ offset_y }}">
+                <span class="value-display" id="valueY">{{ offset_y }}px</span>
+                <small style="color: #666; font-size: 10px;">سالب = فوق | موجب = تحت</small>
+            </div>
+            
+            <div class="control-group">
+                <label>حجم اللوجو</label>
+                <input type="number" id="logoSize" min="100" max="600" value="150" step="10">
+                <span class="value-display" id="valueSize">150px</span>
+            </div>
+            
+            <div class="control-group">
+                <label>الشفافية</label>
+                <input type="range" id="opacity" min="0" max="100" value="100">
+                <span class="value-display" id="valueOpacity">100%</span>
+            </div>
+            
+            <div class="info">
+                ✅ التغييرات تظهر فوراً هنا<br>
+                📱 اوقف البث وابدأ واحد جديد لتطبيق التغييرات على الفيسبوك
+            </div>
+            
+            <div class="button-group">
+                <button onclick="applyChanges()">💾 حفظ</button>
+                <button class="reset" onclick="resetPreview()">🔄 إعادة تعيين</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const logoPreview = document.getElementById('logoPreview');
+        const offsetXInput = document.getElementById('offsetX');
+        const offsetYInput = document.getElementById('offsetY');
+        const logoSizeInput = document.getElementById('logoSize');
+        const opacityInput = document.getElementById('opacity');
+        
+        function updatePreview() {
+            const x = parseInt(offsetXInput.value);
+            const y = parseInt(offsetYInput.value);
+            const size = parseInt(logoSizeInput.value);
+            const opacity = parseInt(opacityInput.value) / 100;
+            
+            logoPreview.style.width = size + 'px';
+            logoPreview.style.left = 'calc(100% - ' + size + 'px - ' + Math.abs(x) + 'px)';
+            logoPreview.style.top = y + 'px';
+            logoPreview.style.opacity = opacity;
+            
+            document.getElementById('valueX').textContent = x + 'px';
+            document.getElementById('valueY').textContent = y + 'px';
+            document.getElementById('valueSize').textContent = size + 'px';
+            document.getElementById('valueOpacity').textContent = opacity * 100 + '%';
+        }
+        
+        function applyChanges() {
+            const x = offsetXInput.value;
+            const y = offsetYInput.value;
+            alert('التغييرات:\n\nLOGO_OFFSET_X = "' + x + '"\nLOGO_OFFSET_Y = "' + y + '"\n\nروح الى config.py وغير هذه الأرقام\n\nثم اوقف البث وابدأ واحد جديد');
+        }
+        
+        function resetPreview() {
+            offsetXInput.value = 0;
+            offsetYInput.value = 0;
+            logoSizeInput.value = 150;
+            opacityInput.value = 100;
+            updatePreview();
+        }
+        
+        offsetXInput.addEventListener('input', updatePreview);
+        offsetYInput.addEventListener('input', updatePreview);
+        logoSizeInput.addEventListener('input', updatePreview);
+        opacityInput.addEventListener('input', updatePreview);
+        
+        updatePreview();
+    </script>
+</body>
+</html>
