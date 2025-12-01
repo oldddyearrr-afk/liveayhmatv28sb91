@@ -24,40 +24,9 @@ class StreamManager:
         self.anti_detect = AntiDetection()
 
     def start_stunnel(self):
-        """بدء stunnel للاتصال الآمن بفيسبوك"""
-        try:
-            self.stop_stunnel()
-            
-            config_content = """pid = /tmp/stunnel/stunnel.pid
-foreground = yes
-[fb-live]
-client = yes
-accept = 0.0.0.0:19350
-connect = live-api-s.facebook.com:443
-verifyChain = no
-"""
-            os.makedirs('/tmp/stunnel', exist_ok=True)
-            with open('/tmp/stunnel/fb.conf', 'w') as f:
-                f.write(config_content)
-            
-            self.stunnel_process = subprocess.Popen(
-                ['stunnel', '/tmp/stunnel/fb.conf'],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
-            )
-            time.sleep(2)
-            
-            if self.stunnel_process.poll() is None:
-                logger.info("✅ stunnel بدأ بنجاح على المنفذ 19350")
-                return True
-            else:
-                stderr = self.stunnel_process.stderr.read().decode('utf-8', errors='ignore')
-                logger.error(f"❌ stunnel فشل: {stderr}")
-                return False
-                
-        except Exception as e:
-            logger.error(f"❌ خطأ في stunnel: {e}")
-            return False
+        """بدء stunnel للاتصال الآمن بفيسبوك (قد لا يكون ضروري مع rtmps)"""
+        logger.info("📌 استخدام RTMPS مباشرة بدون stunnel")
+        return True
 
     def stop_stunnel(self):
         """إيقاف stunnel"""
@@ -71,11 +40,6 @@ verifyChain = no
                 except:
                     pass
             self.stunnel_process = None
-        
-        try:
-            subprocess.run(['pkill', '-f', 'stunnel'], capture_output=True, timeout=3)
-        except:
-            pass
 
     def build_ffmpeg_command(self, m3u8_url, stream_key, logo_path=None, quality='high'):
         """بناء أمر FFmpeg مع تقنيات تجنب الكشف وتحسين الاتصال
@@ -86,7 +50,8 @@ verifyChain = no
             logo_path: مسار اللوجو (اختياري)
             quality: جودة البث - 'low' (low), 'medium' (medium), 'high' (default)
         """
-        rtmp_url = f"rtmp://127.0.0.1:19350/rtmp/{stream_key}"
+        # استخدام RTMPS مباشرة - أكثر استقراراً وموثوقية
+        rtmp_url = f"rtmps://live-api-s.facebook.com:443/rtmp/{stream_key}"
         
         # الحصول على معاملات عشوائية لتجنب الكشف
         anti_params = self.anti_detect.randomize_ffmpeg_params()
@@ -127,21 +92,21 @@ verifyChain = no
         
         # Timeouts محسّنة بناءً على نوع المصدر
         if is_periscope or is_twitch:
-            timeout_val = '60000000'  # 60 ثانية للمصادر الضعيفة
-            rw_timeout_val = '60000000'
+            timeout_val = '120000000'  # 120 ثانية للمصادر الضعيفة
+            rw_timeout_val = '120000000'
         else:
-            timeout_val = '30000000'
-            rw_timeout_val = '30000000'
+            timeout_val = '60000000'
+            rw_timeout_val = '60000000'
         
         command.extend([
             '-rw_timeout', rw_timeout_val,
             '-timeout', timeout_val,
-            '-connect_timeout', '15000000',
-            '-analyzeduration', '10000000' if is_periscope else '5000000',
-            '-probesize', '20000000' if is_periscope else '10000000',
+            '-connect_timeout', '20000000',
+            '-analyzeduration', '15000000' if is_periscope else '10000000',
+            '-probesize', '40000000' if is_periscope else '20000000',
             '-fflags', '+genpts+igndts+discardcorrupt+nobuffer',
             '-err_detect', 'ignore_err',
-            
+            '-http_persistent', '1',
             '-headers', f'User-Agent: {anti_params["user_agent"]}\r\nReferer: https://pscp.tv/\r\nConnection: keep-alive\r\n',
             
             '-i', m3u8_url,
