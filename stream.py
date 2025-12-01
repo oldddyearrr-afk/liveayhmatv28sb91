@@ -119,7 +119,7 @@ verifyChain = no
             
             x_pos = f"main_w-overlay_w+{x_offset}"
             if y_offset < 0:
-                y_pos = f"h-overlay_h{y_offset}"
+                y_pos = f"main_h-overlay_h{y_offset}"
             else:
                 y_pos = str(y_offset)
             
