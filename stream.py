@@ -117,7 +117,7 @@ verifyChain = no
             y_offset = int(str(config.LOGO_OFFSET_Y).strip().strip('"').strip("'"))
             logo_size = config.LOGO_SIZE
             
-            overlay_pos = f"(W-w)+{x_offset}:(H-h)+({y_offset})"
+            overlay_pos = f"x=(W-w)+{x_offset}:y=(H-h)+({y_offset})"
             command.extend([
                 '-filter_complex', f'[1:v]format=rgba,scale={logo_size}[logo];[0:v][logo]overlay={overlay_pos}[outv]',
                 '-map', '[outv]',

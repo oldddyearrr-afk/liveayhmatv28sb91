@@ -81,7 +81,7 @@ async def get_key(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     rtmp = config.FACEBOOK_RTMP_URL
     
     # بدء البث
-    success, msg = stream_manager.start_stream(m3u8, rtmp, key, logo_path="logo.png")
+    success, msg = stream_manager.start_stream(m3u8, rtmp, key, logo_path="./static/logo.png")
     
     if success:
         await update.message.reply_text(
