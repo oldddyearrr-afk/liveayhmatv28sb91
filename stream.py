@@ -78,7 +78,8 @@ class StreamManager:
         command = [
             config.FFMPEG_CMD,
             '-hide_banner',
-            '-loglevel', 'warning',
+            '-loglevel', 'info',
+            '-nostats',
         ]
         
         # Reconnect parameters (تحسينات للاتصال الضعيف)
@@ -87,7 +88,7 @@ class StreamManager:
                 '-reconnect', '1',
                 '-reconnect_streamed', '1', 
                 '-reconnect_at_eof', '1',
-                '-reconnect_delay_max', '15' if is_periscope else str(random.randint(3, 8)),
+                '-reconnect_delay_max', '20' if is_periscope else str(random.randint(5, 10)),
             ])
         
         # Timeouts محسّنة بناءً على نوع المصدر
@@ -101,13 +102,14 @@ class StreamManager:
         command.extend([
             '-rw_timeout', rw_timeout_val,
             '-timeout', timeout_val,
-            '-connect_timeout', '20000000',
-            '-analyzeduration', '15000000' if is_periscope else '10000000',
-            '-probesize', '40000000' if is_periscope else '20000000',
+            '-connect_timeout', '30000000',
+            '-analyzeduration', '20000000' if is_periscope else '15000000',
+            '-probesize', '50000000' if is_periscope else '30000000',
             '-fflags', '+genpts+igndts+discardcorrupt+nobuffer',
             '-err_detect', 'ignore_err',
             '-http_persistent', '1',
-            '-headers', f'User-Agent: {anti_params["user_agent"]}\r\nReferer: https://pscp.tv/\r\nConnection: keep-alive\r\n',
+            '-user_agent', anti_params['user_agent'],
+            '-headers', f'Referer: https://pscp.tv/\r\nConnection: keep-alive\r\n',
             
             '-i', m3u8_url,
         ])
@@ -156,39 +158,49 @@ class StreamManager:
             preset = 'ultrafast'
             crf = '28'
         
-        # تعديل الإعدادات للمصادر الضعيفة
+        # تعديل الإعدادات للمصادر الضعيفة - أولوية الاستقرار على الجودة
         if is_periscope or is_twitch:
             preset = 'ultrafast'
-            video_bitrate = '4000k' if quality.lower() == 'high' else '3000k'
+            if quality.lower() == 'high':
+                video_bitrate = '3500k'
+                max_bitrate = '4000k'
+                buffer_size = '7000k'
+            else:
+                video_bitrate = '2500k'
+                max_bitrate = '3000k'
+                buffer_size = '5000k'
         
         command.extend([
             '-c:v', 'libx264',
             '-preset', preset,
             '-tune', 'zerolatency',
-            '-profile:v', 'high' if quality.lower() == 'high' else 'baseline',
-            '-level', '4.2' if quality.lower() == 'high' else '3.1',
+            '-profile:v', 'baseline',  # استقرار أفضل مع الجميع
+            '-level', '3.1',
             '-pix_fmt', 'yuv420p',
             
-            '-r', '30',
-            '-fps_mode', 'cfr',
-            '-vsync', 'cfr',
+            '-r', '25',  # تقليل الـ frame rate للاستقرار
+            '-fps_mode', 'passthrough',  # مرن أكثر من cfr
+            '-g', '50',  # keyframe أقل تكراراً للاستقرار
+            '-keyint_min', '20',
+            '-sc_threshold', '0',
+            '-nal-hrd', 'vbr',
             
             '-b:v', video_bitrate,
             '-maxrate', max_bitrate,
             '-bufsize', buffer_size,
-            '-g', '30' if quality.lower() == 'high' else '25',
-            '-keyint_min', '10',
-            '-sc_threshold', '0',
+            '-crf', '28',  # quality متوازنة
             
             '-c:a', 'aac',
             '-b:a', audio_bitrate,
-            '-ar', '48000' if quality.lower() == 'high' else '44100',
+            '-ar', '44100',  # معيار آمن
             '-ac', '2',
             
-            '-max_muxing_queue_size', '1024',
-            '-thread_queue_size', '256',
+            '-movflags', '+faststart',
+            '-fflags', '+genpts',
+            '-max_muxing_queue_size', '4096',
+            '-thread_queue_size', '512',
             '-f', 'flv',
-            '-flvflags', 'no_duration_filesize',
+            '-flvflags', 'no_duration_filesize+no_offset_filesize',
             
             rtmp_url
         ])
