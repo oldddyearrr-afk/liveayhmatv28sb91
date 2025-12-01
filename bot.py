@@ -3,6 +3,8 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ConversationHandler, ContextTypes
 import config
 from stream import StreamManager
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # تفعيل السجلات
 logging.basicConfig(
@@ -129,8 +131,28 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text("❌ تم إلغاء العملية.")
     return ConversationHandler.END
 
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/plain')
+        self.end_headers()
+        self.wfile.write(b'Bot is running')
+    
+    def log_message(self, format, *args):
+        pass
+
+def start_health_server():
+    """بدء خادم Health Check على المنفذ 10000"""
+    server = HTTPServer(('0.0.0.0', 10000), HealthCheckHandler)
+    server.serve_forever()
+
 def main() -> None:
     """تشغيل البوت"""
+    # بدء خادم Health Check في خيط منفصل
+    health_thread = threading.Thread(target=start_health_server, daemon=True)
+    health_thread.start()
+    logger.info("✅ Health check server started on port 10000")
+    
     application = Application.builder().token(config.BOT_TOKEN).build()
 
     # معالج الحوار
