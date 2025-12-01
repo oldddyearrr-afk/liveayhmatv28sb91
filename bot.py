@@ -1,3 +1,4 @@
+
 import logging
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ConversationHandler, ContextTypes
@@ -35,12 +36,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 async def start_stream_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """أمر بدء البث"""
-    # فحص حقيقي للعملية
     if stream_manager.process and stream_manager.process.poll() is None:
         await update.message.reply_text("⚠️ البث يعمل بالفعل! استخدم /stop لإيقافه أولاً.")
         return ConversationHandler.END
     
-    # تنظيف الحالة إذا كانت خاطئة
     stream_manager.is_running = False
     stream_manager.process = None
 
@@ -65,7 +64,6 @@ async def get_key(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     m3u8 = context.user_data['m3u8']
     key = update.message.text.strip()
     
-    # فحص أساسي للـ Stream Key
     if len(key) < 10:
         await update.message.reply_text("❌ Stream Key قصير جداً! تأكد من نسخه بالكامل.")
         return KEY
@@ -79,10 +77,7 @@ async def get_key(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         "⏱️ انتظر 15 ثانية..."
     )
     
-    # الرابط الافتراضي لفيسبوك
     rtmp = config.FACEBOOK_RTMP_URL
-    
-    # بدء البث
     success, msg = stream_manager.start_stream(m3u8, rtmp, key, logo_path="./static/logo.png")
     
     if success:
@@ -109,7 +104,7 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     return ConversationHandler.END
 
 async def reset_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """إعادة تعيين حالة البوت بالكامل (للطوارئ)"""
+    """إعادة تعيين حالة البوت بالكامل"""
     stream_manager.is_running = False
     if stream_manager.process:
         try:
@@ -136,42 +131,53 @@ class HealthCheckHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Content-type', 'text/plain')
         self.end_headers()
-        self.wfile.write(b'Bot is running')
+        self.wfile.write(b'Bot is running on Render.com')
     
     def log_message(self, format, *args):
         pass
 
-def start_health_server():
-    """بدء خادم Health Check على المنفذ 10000"""
-    server = HTTPServer(('0.0.0.0', 10000), HealthCheckHandler)
-    server.serve_forever()
+def run_bot():
+    """تشغيل البوت في خيط منفصل"""
+    try:
+        application = Application.builder().token(config.BOT_TOKEN).build()
+
+        conv_handler = ConversationHandler(
+            entry_points=[CommandHandler("stream", start_stream_command)],
+            states={
+                M3U8: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_m3u8)],
+                KEY: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_key)],
+            },
+            fallbacks=[CommandHandler("cancel", cancel)],
+        )
+
+        application.add_handler(CommandHandler("start", start))
+        application.add_handler(CommandHandler("stop", stop_stream_command))
+        application.add_handler(CommandHandler("status", status_command))
+        application.add_handler(CommandHandler("reset", reset_command))
+        application.add_handler(conv_handler)
+
+        logger.info("✅ Telegram Bot started")
+        application.run_polling(allowed_updates=Update.ALL_TYPES)
+    except Exception as e:
+        logger.error(f"❌ Bot error: {e}")
 
 def main() -> None:
-    """تشغيل البوت"""
-    # بدء خادم Health Check في خيط منفصل
-    health_thread = threading.Thread(target=start_health_server, daemon=True)
-    health_thread.start()
-    logger.info("✅ Health check server started on port 10000")
+    """تشغيل Health Check Server كعملية رئيسية + البوت في الخلفية"""
+    logger.info("🚀 Starting application...")
     
-    application = Application.builder().token(config.BOT_TOKEN).build()
-
-    # معالج الحوار
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("stream", start_stream_command)],
-        states={
-            M3U8: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_m3u8)],
-            KEY: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_key)],
-        },
-        fallbacks=[CommandHandler("cancel", cancel)],
-    )
-
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("stop", stop_stream_command))
-    application.add_handler(CommandHandler("status", status_command))
-    application.add_handler(CommandHandler("reset", reset_command))
-    application.add_handler(conv_handler)
-
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
+    # تشغيل البوت في خيط منفصل
+    bot_thread = threading.Thread(target=run_bot, daemon=True)
+    bot_thread.start()
+    logger.info("✅ Bot thread started")
+    
+    # Health Check Server كعملية رئيسية (لـ Render)
+    PORT = 10000
+    server = HTTPServer(('0.0.0.0', PORT), HealthCheckHandler)
+    logger.info(f"✅ Health check server running on port {PORT}")
+    logger.info("🎯 Render.com will detect this port!")
+    
+    # هذا سيبقى يعمل إلى الأبد
+    server.serve_forever()
 
 if __name__ == "__main__":
     main()
