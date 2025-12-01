@@ -80,6 +80,9 @@ class StreamManager:
             '-hide_banner',
             '-loglevel', 'info',
             '-nostats',
+            # أولويات البروتوكول الآمنة
+            '-protocol_whitelist', 'file,http,https,tcp,tls,crypto',
+            '-tls_verify', '0',  # تجاوز مشاكل شهادات Twitter/Facebook
         ]
         
         # Reconnect parameters (تحسينات للاتصال الضعيف)
@@ -199,6 +202,9 @@ class StreamManager:
             '-fflags', '+genpts',
             '-max_muxing_queue_size', '4096',
             '-thread_queue_size', '512',
+            
+            # تجاوز مشاكل SSL/TLS مع Facebook RTMPS
+            '-tls_verify', '0',
             '-f', 'flv',
             '-flvflags', 'no_duration_filesize+no_offset_filesize',
             
