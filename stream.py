@@ -177,36 +177,29 @@ class StreamManager:
             '-c:v', 'libx264',
             '-preset', preset,
             '-tune', 'zerolatency',
-            '-profile:v', 'baseline',  # استقرار أفضل مع الجميع
+            '-profile:v', 'baseline',
             '-level', '3.1',
             '-pix_fmt', 'yuv420p',
             
-            '-r', '25',  # تقليل الـ frame rate للاستقرار
-            '-fps_mode', 'passthrough',  # مرن أكثر من cfr
-            '-g', '50',  # keyframe أقل تكراراً للاستقرار
-            '-keyint_min', '20',
+            '-r', '30',  # معدل ثابت
+            '-g', '60',  # keyframe كل ثانيتين
+            '-keyint_min', '30',
             '-sc_threshold', '0',
-            '-nal-hrd', 'vbr',
             
             '-b:v', video_bitrate,
             '-maxrate', max_bitrate,
             '-bufsize', buffer_size,
-            '-crf', '28',  # quality متوازنة
             
             '-c:a', 'aac',
             '-b:a', audio_bitrate,
-            '-ar', '44100',  # معيار آمن
+            '-ar', '44100',
             '-ac', '2',
             
-            '-movflags', '+faststart',
-            '-fflags', '+genpts',
             '-max_muxing_queue_size', '4096',
             '-thread_queue_size', '512',
-            
-            # تجاوز مشاكل SSL/TLS مع Facebook RTMPS
             '-tls_verify', '0',
             '-f', 'flv',
-            '-flvflags', 'no_duration_filesize+no_offset_filesize',
+            '-flvflags', 'no_duration_filesize',
             
             rtmp_url
         ])
@@ -340,7 +333,8 @@ class StreamManager:
             
             logger.info(f"✅ FFmpeg بدأ بـ PID: {self.process.pid}")
             
-            time.sleep(10)
+            # انتظر أطول للتحقق من نجاح الاتصال بـ Facebook
+            time.sleep(15)
             
             if self.process.poll() is not None:
                 stderr = ""
@@ -358,20 +352,27 @@ class StreamManager:
                     return False, "❌ رابط M3U8 غير صالح أو انتهى!\n\nاحصل على رابط جديد."
                 elif "403" in stderr:
                     return False, "❌ الوصول مرفوض من المصدر!"
-                elif "Connection refused" in stderr or "refused" in stderr.lower():
-                    return False, "❌ فشل الاتصال بفيسبوك!\n\nتأكد من:\n• Stream Key صحيح وجديد\n• صفحة Go Live مفتوحة في فيسبوك"
-                elif "timed out" in stderr:
+                elif "Connection refused" in stderr or "refused" in stderr.lower() or "TLS" in stderr:
+                    return False, "❌ فشل الاتصال بفيسبوك!\n\nتأكد من:\n• Stream Key صحيح وجديد\n• صفحة البث مفتوحة في فيسبوك\n• الرابط حي ولم ينته"
+                elif "timed out" in stderr or "timeout" in stderr.lower():
                     return False, "❌ انتهت مهلة الاتصال!"
-                elif "Invalid argument" in stderr or "Unable to parse" in stderr:
-                    return False, "❌ خطأ في معاملات البث! تحديث توقع."
+                elif "mime type is not rfc8216" in stderr:
+                    return False, "❌ صيغة البث غير معيارية! استخدم رابط M3U8 قياسي."
+                elif "Error opening" in stderr:
+                    return False, "❌ لم نتمكن من فتح المصدر!\n\n• تأكد من الرابط صحيح\n• الرابط يجب أن يكون حي الآن"
                 else:
                     return False, f"❌ فشل البث:\n{stderr[:200]}"
+            
+            # تحقق أن العملية لا تزال تعمل بعد 15 ثانية
+            time.sleep(5)
+            if self.process.poll() is not None:
+                return False, "❌ البث توقف بعد البدء!\n\nتأكد من Stream Key والبث المفتوح في Facebook"
             
             self.is_running = True
             self.monitor_thread = threading.Thread(target=self.monitor_process, daemon=True)
             self.monitor_thread.start()
             
-            return True, "✅ البث يعمل!\n\n🛡️ حيل التجنب مفعلة\n📺 افتح صفحة البث في فيسبوك.\n⏱️ انتظر 10-30 ثانية لظهور الفيديو.\n\nاستخدم /stop لإيقاف البث."
+            return True, "✅ البث يعمل!\n\n🛡️ حيل التجنب مفعلة\n📺 افتح صفحة البث في فيسبوك.\n⏱️ يجب أن تراه في ثوانٍ.\n\nاستخدم /stop لإيقاف البث."
             
         except Exception as e:
             logger.error(f"❌ خطأ: {e}")
