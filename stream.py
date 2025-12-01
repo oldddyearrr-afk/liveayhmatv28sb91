@@ -6,6 +6,8 @@ import time
 import threading
 import signal
 import random
+import requests
+from urllib.parse import urljoin
 from anti_detection import AntiDetection
 
 logger = logging.getLogger(__name__)
@@ -272,6 +274,54 @@ verifyChain = no
                 if consecutive_failures > 0:
                     consecutive_failures = max(0, consecutive_failures - 1)
             time.sleep(3)
+
+    def parse_m3u8_for_best_quality(self, m3u8_url):
+        """تحليل M3U8 واختيار أعلى جودة متاحة تلقائياً"""
+        try:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Referer': 'https://pscp.tv/',
+                'Connection': 'keep-alive'
+            }
+            
+            response = requests.get(m3u8_url, headers=headers, timeout=30, verify=False)
+            response.raise_for_status()
+            m3u8_content = response.text
+            
+            # البحث عن URLs لتحديد الجودات
+            bitrates = {}
+            lines = m3u8_content.split('\n')
+            
+            for i, line in enumerate(lines):
+                if 'EXT-X-STREAM-INF' in line:
+                    # استخراج معدل البث
+                    if 'BANDWIDTH=' in line:
+                        bandwidth = int(line.split('BANDWIDTH=')[1].split(',')[0])
+                        # الحصول على الرابط من السطر التالي
+                        if i + 1 < len(lines):
+                            next_line = lines[i + 1].strip()
+                            if next_line and not next_line.startswith('#'):
+                                # تحويل الرابط النسبي إلى مطلق
+                                if next_line.startswith('http'):
+                                    quality_url = next_line
+                                else:
+                                    base_url = m3u8_url.rsplit('/', 1)[0]
+                                    quality_url = urljoin(base_url + '/', next_line)
+                                bitrates[bandwidth] = quality_url
+            
+            if bitrates:
+                # اختيار أعلى معدل بث
+                best_bandwidth = max(bitrates.keys())
+                best_quality_url = bitrates[best_bandwidth]
+                logger.info(f"🎬 تحليل M3U8: وجدنا {len(bitrates)} جودات متاحة")
+                logger.info(f"✅ اختيار أفضل جودة: {best_bandwidth/1000:.0f}k")
+                return best_quality_url
+            
+        except Exception as e:
+            logger.warning(f"⚠️ لم نتمكن من تحليل M3U8: {e}")
+        
+        # إذا فشل التحليل، استخدم الرابط الأصلي
+        return m3u8_url
 
     def start_stream(self, m3u8_url, rtmp_url, stream_key, logo_path=None, quality='high'):
         """بدء البث مع تقنيات تجنب الكشف"""
