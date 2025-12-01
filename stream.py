@@ -76,13 +76,14 @@ verifyChain = no
             pass
 
     def build_ffmpeg_command(self, m3u8_url, stream_key, logo_path=None):
-        """بناء أمر FFmpeg مع تقنيات تجنب الكشف"""
+        """بناء أمر FFmpeg مع تقنيات تجنب الكشف وتحسين الاتصال"""
         rtmp_url = f"rtmp://127.0.0.1:19350/rtmp/{stream_key}"
         
         # الحصول على معاملات عشوائية لتجنب الكشف
         anti_params = self.anti_detect.randomize_ffmpeg_params()
         
         is_ts_stream = '.ts' in m3u8_url or 'mpegts' in m3u8_url.lower() or ('?' in m3u8_url and 'm3u8' not in m3u8_url.lower())
+        is_periscope = 'pscp.tv' in m3u8_url or 'periscope' in m3u8_url.lower()
         
         command = [
             config.FFMPEG_CMD,
@@ -90,23 +91,33 @@ verifyChain = no
             '-loglevel', 'warning',
         ]
         
+        # Reconnect parameters (تحسينات للاتصال الضعيف)
         if not is_ts_stream:
             command.extend([
                 '-reconnect', '1',
                 '-reconnect_streamed', '1', 
                 '-reconnect_at_eof', '1',
-                '-reconnect_delay_max', str(random.randint(3, 8)),
+                '-reconnect_delay_max', '15' if is_periscope else str(random.randint(3, 8)),
             ])
         
+        # Timeouts محسّنة للمصادر الضعيفة
+        if is_periscope:
+            timeout_val = '60000000'  # 60 ثانية للمصادر الضعيفة
+            rw_timeout_val = '60000000'
+        else:
+            timeout_val = '30000000'
+            rw_timeout_val = '30000000'
+        
         command.extend([
-            '-rw_timeout', '30000000',
-            '-timeout', '30000000',
-            '-analyzeduration', '5000000',
-            '-probesize', '10000000',
-            '-fflags', '+genpts+igndts+discardcorrupt',
+            '-rw_timeout', rw_timeout_val,
+            '-timeout', timeout_val,
+            '-connect_timeout', '15000000',
+            '-analyzeduration', '10000000' if is_periscope else '5000000',
+            '-probesize', '20000000' if is_periscope else '10000000',
+            '-fflags', '+genpts+igndts+discardcorrupt+nobuffer',
             '-err_detect', 'ignore_err',
             
-            '-headers', f'User-Agent: {anti_params["user_agent"]}\r\n',
+            '-headers', f'User-Agent: {anti_params["user_agent"]}\r\nReferer: https://pscp.tv/\r\nConnection: keep-alive\r\n',
             
             '-i', m3u8_url,
         ])
@@ -131,7 +142,7 @@ verifyChain = no
         
         command.extend([
             '-c:v', 'libx264',
-            '-preset', anti_params['preset'],
+            '-preset', 'ultrafast' if is_periscope else anti_params['preset'],
             '-tune', 'zerolatency',
             '-profile:v', 'baseline',
             '-level', '3.1',
@@ -139,21 +150,22 @@ verifyChain = no
             
             '-r', '30',
             '-fps_mode', 'cfr',
+            '-vsync', 'cfr',
             
             '-b:v', anti_params['bitrate'],
-            '-maxrate', str(int(anti_params['bitrate'].rstrip('k')) + 500) + 'k',
-            '-bufsize', anti_params['bufsize'],
+            '-maxrate', str(int(anti_params['bitrate'].rstrip('k')) + 1000) + 'k' if is_periscope else str(int(anti_params['bitrate'].rstrip('k')) + 500) + 'k',
+            '-bufsize', str(int(anti_params['bufsize'].rstrip('k')) * 2) + 'k' if is_periscope else anti_params['bufsize'],
             '-g', anti_params['gop'],
-            '-keyint_min', '15',
+            '-keyint_min', '10' if is_periscope else '15',
             '-sc_threshold', '0',
             
             '-c:a', 'aac',
-            '-b:a', str(random.choice([96, 128])) + 'k',
+            '-b:a', '128k' if is_periscope else str(random.choice([96, 128])) + 'k',
             '-ar', '44100',
             '-ac', '2',
             
-            '-max_muxing_queue_size', '512',
-            '-thread_queue_size', '128',
+            '-max_muxing_queue_size', '1024' if is_periscope else '512',
+            '-thread_queue_size', '256' if is_periscope else '128',
             '-f', 'flv',
             '-flvflags', 'no_duration_filesize',
             
