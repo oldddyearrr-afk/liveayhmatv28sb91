@@ -87,8 +87,8 @@ async def get_key(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     
     rtmp = config.FACEBOOK_RTMP_URL
     
-    # بدء البث بأفضل جودة متاحة
-    success, msg = stream_manager.start_stream(best_m3u8, rtmp, key, logo_path="./static/logo.png", quality='high')
+    # بدء البث بأفضل جودة متاحة (ULTRA من config)
+    success, msg = stream_manager.start_stream(best_m3u8, rtmp, key, logo_path="./static/logo.png", quality=config.QUALITY_MODE or 'ultra')
     
     if success:
         await update.message.reply_text(

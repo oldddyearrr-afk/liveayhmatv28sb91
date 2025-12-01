@@ -105,36 +105,44 @@ class StreamManager:
             except:
                 logo_path = None
         
-        # Quality settings based on mode
-        if quality.lower() == 'high':
-            bitrate = '5000k'
-            maxrate = '6000k'
-            bufsize = '10000k'
+        # Quality settings based on mode (نفس إعدادات myproject)
+        if quality.lower() == 'ultra':
+            bitrate = config.ULTRA_BITRATE or '5000k'
+            maxrate = config.ULTRA_MAXRATE or '6000k'
+            bufsize = config.ULTRA_BUFSIZE or '10000k'
+            audio_bitrate = config.ULTRA_AUDIO_BITRATE or '192k'
+        elif quality.lower() == 'high':
+            bitrate = config.HIGH_BITRATE or '4500k'
+            maxrate = config.HIGH_MAXRATE or '5000k'
+            bufsize = config.HIGH_BUFSIZE or '9000k'
+            audio_bitrate = config.HIGH_AUDIO_BITRATE or '160k'
         elif quality.lower() == 'medium':
-            bitrate = '3000k'
-            maxrate = '3500k'
-            bufsize = '6000k'
-        else:
-            bitrate = '2000k'
-            maxrate = '2500k'
-            bufsize = '4000k'
+            bitrate = config.MEDIUM_BITRATE or '3000k'
+            maxrate = config.MEDIUM_MAXRATE or '3500k'
+            bufsize = config.MEDIUM_BUFSIZE or '6000k'
+            audio_bitrate = config.MEDIUM_AUDIO_BITRATE or '128k'
+        else:  # low
+            bitrate = config.LOW_BITRATE or '2000k'
+            maxrate = config.LOW_MAXRATE or '2500k'
+            bufsize = config.LOW_BUFSIZE or '4000k'
+            audio_bitrate = config.LOW_AUDIO_BITRATE or '96k'
         
-        # Encoding parameters
+        # Encoding parameters (إعدادات myproject المثبتة)
         encode_params = [
             '-c:v', 'libx264',
-            '-preset', 'ultrafast',
-            '-tune', 'zerolatency',
+            '-preset', config.PRESET or 'ultrafast',
+            '-tune', config.TUNE or 'zerolatency',
             '-b:v', bitrate,
             '-maxrate', maxrate,
             '-bufsize', bufsize,
-            '-pix_fmt', 'yuv420p',
+            '-pix_fmt', config.PIXEL_FORMAT or 'yuv420p',
             '-g', '60',
             '-keyint_min', '30',
             '-sc_threshold', '0',
             
-            '-c:a', 'aac',
-            '-b:a', '128k',
-            '-ar', '44100',
+            '-c:a', config.AUDIO_CODEC or 'aac',
+            '-b:a', audio_bitrate,
+            '-ar', str(config.AUDIO_RATE or 44100),
             '-ac', '2',
             
             '-f', 'flv',
