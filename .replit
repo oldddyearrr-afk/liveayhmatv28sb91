@@ -34,10 +34,6 @@ args = "Logo Preview"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Telegram Bot"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
 args = "Bot Server"
 
 [[workflows.workflow]]
@@ -51,17 +47,6 @@ waitForPort = 5000
 
 [workflows.workflow.metadata]
 outputType = "webview"
-
-[[workflows.workflow]]
-name = "Telegram Bot"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python bot.py"
-
-[workflows.workflow.metadata]
-outputType = "console"
 
 [[workflows.workflow]]
 name = "Bot Server"

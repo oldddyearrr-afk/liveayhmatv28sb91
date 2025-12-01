@@ -1,7 +1,6 @@
 
 import logging
 import os
-import signal
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ConversationHandler, ContextTypes
 import config
@@ -143,24 +142,20 @@ class HealthCheckHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         pass
 
-def run_server(port):
-    """تشغيل Health Check Server"""
-    server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
-    server.allow_reuse_address = True
-    logger.info(f"✅ Health check server running on port {port}")
-    logger.info("🎯 Server is ready!")
+def run_server_daemon(port):
+    """تشغيل Health Check Server في خيط منفصل"""
     try:
+        server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
+        server.allow_reuse_address = True
+        logger.info(f"✅ Health check server running on port {port}")
+        logger.info("🎯 Server is ready!")
         server.serve_forever()
     except Exception as e:
         logger.error(f"Server error: {e}")
 
-def run_bot():
-    """تشغيل البوت في خيط منفصل"""
+def run_bot_main():
+    """تشغيل البوت في الـ Main Thread (العملية الرئيسية)"""
     try:
-        # تعطيل signal handlers في thread منفصل
-        signal.signal(signal.SIGINT, signal.SIG_DFL)
-        signal.signal(signal.SIGTERM, signal.SIG_DFL)
-        
         application = Application.builder().token(config.BOT_TOKEN).build()
 
         conv_handler = ConversationHandler(
@@ -178,24 +173,24 @@ def run_bot():
         application.add_handler(CommandHandler("reset", reset_command))
         application.add_handler(conv_handler)
 
-        logger.info("✅ Telegram Bot started")
-        application.run_polling(allowed_updates=Update.ALL_TYPES, allowed_backends=[])
+        logger.info("✅ Telegram Bot started successfully")
+        application.run_polling(allowed_updates=Update.ALL_TYPES, timeout=30)
     except Exception as e:
         logger.error(f"❌ Bot error: {e}")
 
 def main() -> None:
-    """تشغيل Health Check Server كعملية رئيسية + البوت في الخلفية"""
+    """تشغيل Health Check Server في الخلفية + البوت في Main Thread"""
     logger.info("🚀 Starting application...")
     
     PORT = int(os.getenv('PORT', 8000))
     
-    # تشغيل البوت في خيط منفصل (daemon=True لأنه يعمل في الخلفية)
-    bot_thread = threading.Thread(target=run_bot, daemon=True)
-    bot_thread.start()
-    logger.info("✅ Bot thread started")
+    # تشغيل Health Check Server في خيط منفصل (daemon)
+    server_thread = threading.Thread(target=run_server_daemon, args=(PORT,), daemon=True)
+    server_thread.start()
+    logger.info("✅ Health check server thread started")
     
-    # تشغيل Health Check Server كعملية رئيسية
-    run_server(PORT)
+    # تشغيل البوت في الـ Main Thread (حل signal handling issues)
+    run_bot_main()
 
 if __name__ == "__main__":
     main()
