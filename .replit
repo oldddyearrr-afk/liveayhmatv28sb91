@@ -36,6 +36,10 @@ args = "Logo Preview"
 task = "workflow.run"
 args = "Telegram Bot"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Bot Server"
+
 [[workflows.workflow]]
 name = "Logo Preview"
 author = "agent"
@@ -59,9 +63,25 @@ args = "python bot.py"
 [workflows.workflow.metadata]
 outputType = "console"
 
+[[workflows.workflow]]
+name = "Bot Server"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot.py"
+waitForPort = 8000
+
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 8000
+externalPort = 8000
 
 [[ports]]
 localPort = 10000
@@ -71,3 +91,7 @@ externalPort = 3000
 localPort = 19350
 externalPort = 8080
 exposeLocalhost = true
+
+[[ports]]
+localPort = 34897
+externalPort = 3001

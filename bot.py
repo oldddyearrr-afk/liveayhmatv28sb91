@@ -1,5 +1,7 @@
 
 import logging
+import os
+import signal
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ConversationHandler, ContextTypes
 import config
@@ -128,17 +130,37 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
-        self.send_response(200)
-        self.send_header('Content-type', 'text/plain')
-        self.end_headers()
-        self.wfile.write(b'Bot is running on Render.com')
+        if self.path == '/':
+            self.send_response(200)
+            self.send_header('Content-type', 'text/plain')
+            self.send_header('Cache-Control', 'no-cache')
+            self.end_headers()
+            self.wfile.write(b'OK')
+        else:
+            self.send_response(404)
+            self.end_headers()
     
     def log_message(self, format, *args):
         pass
 
+def run_server(port):
+    """تشغيل Health Check Server"""
+    server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
+    server.allow_reuse_address = True
+    logger.info(f"✅ Health check server running on port {port}")
+    logger.info("🎯 Server is ready!")
+    try:
+        server.serve_forever()
+    except Exception as e:
+        logger.error(f"Server error: {e}")
+
 def run_bot():
     """تشغيل البوت في خيط منفصل"""
     try:
+        # تعطيل signal handlers في thread منفصل
+        signal.signal(signal.SIGINT, signal.SIG_DFL)
+        signal.signal(signal.SIGTERM, signal.SIG_DFL)
+        
         application = Application.builder().token(config.BOT_TOKEN).build()
 
         conv_handler = ConversationHandler(
@@ -157,7 +179,7 @@ def run_bot():
         application.add_handler(conv_handler)
 
         logger.info("✅ Telegram Bot started")
-        application.run_polling(allowed_updates=Update.ALL_TYPES)
+        application.run_polling(allowed_updates=Update.ALL_TYPES, allowed_backends=[])
     except Exception as e:
         logger.error(f"❌ Bot error: {e}")
 
@@ -165,19 +187,15 @@ def main() -> None:
     """تشغيل Health Check Server كعملية رئيسية + البوت في الخلفية"""
     logger.info("🚀 Starting application...")
     
-    # تشغيل البوت في خيط منفصل
+    PORT = int(os.getenv('PORT', 8000))
+    
+    # تشغيل البوت في خيط منفصل (daemon=True لأنه يعمل في الخلفية)
     bot_thread = threading.Thread(target=run_bot, daemon=True)
     bot_thread.start()
     logger.info("✅ Bot thread started")
     
-    # Health Check Server كعملية رئيسية (لـ Render)
-    PORT = 10000
-    server = HTTPServer(('0.0.0.0', PORT), HealthCheckHandler)
-    logger.info(f"✅ Health check server running on port {PORT}")
-    logger.info("🎯 Render.com will detect this port!")
-    
-    # هذا سيبقى يعمل إلى الأبد
-    server.serve_forever()
+    # تشغيل Health Check Server كعملية رئيسية
+    run_server(PORT)
 
 if __name__ == "__main__":
     main()

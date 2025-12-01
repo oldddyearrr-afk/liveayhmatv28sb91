@@ -1,9 +1,10 @@
-
 services:
   - type: web
     name: telegram-stream-bot
     env: docker
     plan: free
+    numInstances: 1
+    port: 8000
     healthCheckPath: /
     envVars:
       - key: BOT_TOKEN
@@ -11,4 +12,4 @@ services:
       - key: PYTHONUNBUFFERED
         value: "1"
       - key: PORT
-        value: "10000"
+        value: "8000"
