@@ -75,15 +75,25 @@ verifyChain = no
         except:
             pass
 
-    def build_ffmpeg_command(self, m3u8_url, stream_key, logo_path=None):
-        """بناء أمر FFmpeg مع تقنيات تجنب الكشف وتحسين الاتصال"""
+    def build_ffmpeg_command(self, m3u8_url, stream_key, logo_path=None, quality='high'):
+        """بناء أمر FFmpeg مع تقنيات تجنب الكشف وتحسين الاتصال
+        
+        Args:
+            m3u8_url: رابط البث (m3u8, ts, أو أي مصدر)
+            stream_key: مفتاح البث في Facebook
+            logo_path: مسار اللوجو (اختياري)
+            quality: جودة البث - 'low' (low), 'medium' (medium), 'high' (default)
+        """
         rtmp_url = f"rtmp://127.0.0.1:19350/rtmp/{stream_key}"
         
         # الحصول على معاملات عشوائية لتجنب الكشف
         anti_params = self.anti_detect.randomize_ffmpeg_params()
         
+        # اكتشاف نوع المصدر
         is_ts_stream = '.ts' in m3u8_url or 'mpegts' in m3u8_url.lower() or ('?' in m3u8_url and 'm3u8' not in m3u8_url.lower())
         is_periscope = 'pscp.tv' in m3u8_url or 'periscope' in m3u8_url.lower()
+        is_youtube = 'youtube' in m3u8_url.lower() or 'youtu' in m3u8_url.lower()
+        is_twitch = 'twitch' in m3u8_url.lower() or 'twitch.tv' in m3u8_url.lower()
         
         # تحويل رابط الجودة المحددة إلى master playlist للاستقرار الأفضل
         if is_periscope and 'transcode/' in m3u8_url and 'dynamic_highlatency.m3u8' in m3u8_url:
@@ -93,9 +103,10 @@ verifyChain = no
             # إزالة المنفذ 443 لأنه غير ضروري في master
             master_url = master_url.replace(':443/', '/')
             logger.info(f"🔄 تحويل من جودة محددة إلى Master playlist للاستقرار")
-            logger.info(f"📡 URL الأصلي: {m3u8_url[:80]}...")
-            logger.info(f"📡 Master URL: {master_url[:80]}...")
             m3u8_url = master_url
+        
+        logger.info(f"📊 جودة البث المطلوبة: {quality.upper()}")
+        logger.info(f"📡 المصدر: {'Periscope' if is_periscope else 'YouTube' if is_youtube else 'Twitch' if is_twitch else 'مصدر آخر'}")
         
         command = [
             config.FFMPEG_CMD,
@@ -112,8 +123,8 @@ verifyChain = no
                 '-reconnect_delay_max', '15' if is_periscope else str(random.randint(3, 8)),
             ])
         
-        # Timeouts محسّنة للمصادر الضعيفة
-        if is_periscope:
+        # Timeouts محسّنة بناءً على نوع المصدر
+        if is_periscope or is_twitch:
             timeout_val = '60000000'  # 60 ثانية للمصادر الضعيفة
             rw_timeout_val = '60000000'
         else:
@@ -152,32 +163,63 @@ verifyChain = no
                 '-map', '0:a:0?',
             ])
         
+        # إعدادات الجودة بناءً على الطلب
+        if quality.lower() == 'high':
+            # جودة عالية - أفضل ممكن
+            video_bitrate = '6000k'
+            max_bitrate = '7000k'
+            buffer_size = '14000k'
+            audio_bitrate = '192k'
+            preset = 'superfast'
+            crf = '23'
+        elif quality.lower() == 'medium':
+            # جودة متوسطة - توازن
+            video_bitrate = '4000k'
+            max_bitrate = '4500k'
+            buffer_size = '8000k'
+            audio_bitrate = '128k'
+            preset = 'ultrafast'
+            crf = '26'
+        else:  # low
+            # جودة منخفضة - استقرار أفضل
+            video_bitrate = '2500k'
+            max_bitrate = '3000k'
+            buffer_size = '5000k'
+            audio_bitrate = '96k'
+            preset = 'ultrafast'
+            crf = '28'
+        
+        # تعديل الإعدادات للمصادر الضعيفة
+        if is_periscope or is_twitch:
+            preset = 'ultrafast'
+            video_bitrate = '4000k' if quality.lower() == 'high' else '3000k'
+        
         command.extend([
             '-c:v', 'libx264',
-            '-preset', 'ultrafast' if is_periscope else anti_params['preset'],
+            '-preset', preset,
             '-tune', 'zerolatency',
-            '-profile:v', 'baseline',
-            '-level', '3.1',
+            '-profile:v', 'high' if quality.lower() == 'high' else 'baseline',
+            '-level', '4.2' if quality.lower() == 'high' else '3.1',
             '-pix_fmt', 'yuv420p',
             
             '-r', '30',
             '-fps_mode', 'cfr',
             '-vsync', 'cfr',
             
-            '-b:v', anti_params['bitrate'],
-            '-maxrate', str(int(anti_params['bitrate'].rstrip('k')) + 1000) + 'k' if is_periscope else str(int(anti_params['bitrate'].rstrip('k')) + 500) + 'k',
-            '-bufsize', str(int(anti_params['bufsize'].rstrip('k')) * 2) + 'k' if is_periscope else anti_params['bufsize'],
-            '-g', anti_params['gop'],
-            '-keyint_min', '10' if is_periscope else '15',
+            '-b:v', video_bitrate,
+            '-maxrate', max_bitrate,
+            '-bufsize', buffer_size,
+            '-g', '30' if quality.lower() == 'high' else '25',
+            '-keyint_min', '10',
             '-sc_threshold', '0',
             
             '-c:a', 'aac',
-            '-b:a', '128k' if is_periscope else str(random.choice([96, 128])) + 'k',
-            '-ar', '44100',
+            '-b:a', audio_bitrate,
+            '-ar', '48000' if quality.lower() == 'high' else '44100',
             '-ac', '2',
             
-            '-max_muxing_queue_size', '1024' if is_periscope else '512',
-            '-thread_queue_size', '256' if is_periscope else '128',
+            '-max_muxing_queue_size', '1024',
+            '-thread_queue_size', '256',
             '-f', 'flv',
             '-flvflags', 'no_duration_filesize',
             
@@ -231,7 +273,7 @@ verifyChain = no
                     consecutive_failures = max(0, consecutive_failures - 1)
             time.sleep(3)
 
-    def start_stream(self, m3u8_url, rtmp_url, stream_key, logo_path=None):
+    def start_stream(self, m3u8_url, rtmp_url, stream_key, logo_path=None, quality='high'):
         """بدء البث مع تقنيات تجنب الكشف"""
         if self.process and self.process.poll() is None:
             return False, "⚠️ البث يعمل بالفعل! استخدم /stop أولاً."
@@ -249,7 +291,7 @@ verifyChain = no
         if not self.start_stunnel():
             return False, "❌ فشل تشغيل الاتصال الآمن!\n\nحاول مرة أخرى."
         
-        command = self.build_ffmpeg_command(m3u8_url, stream_key, logo_path)
+        command = self.build_ffmpeg_command(m3u8_url, stream_key, logo_path, quality=quality)
         self.last_command = command
         
         logger.info(f"📺 بدء البث...")

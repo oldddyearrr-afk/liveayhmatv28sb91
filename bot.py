@@ -15,7 +15,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # حالات الحوار
-M3U8, KEY = range(2)
+M3U8, KEY, QUALITY = range(3)
 
 stream_manager = StreamManager()
 
@@ -69,6 +69,35 @@ async def get_key(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         await update.message.reply_text("❌ Stream Key قصير جداً! تأكد من نسخه بالكامل.")
         return KEY
     
+    context.user_data['stream_key'] = key
+    
+    # اسأل عن الجودة المطلوبة
+    await update.message.reply_text(
+        "🎬 اختر جودة البث:\n\n"
+        "1️⃣ جودة عالية (6000 كبس) - أفضل جودة\n"
+        "2️⃣ جودة متوسطة (4000 كبس) - توازن\n"
+        "3️⃣ جودة منخفضة (2500 كبس) - استقرار أفضل\n\n"
+        "أرسل رقم الجودة المطلوبة (1 أو 2 أو 3)"
+    )
+    return QUALITY
+
+async def get_quality(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """استقبال اختيار الجودة"""
+    quality_choice = update.message.text.strip()
+    
+    quality_map = {
+        '1': 'high',
+        '2': 'medium',
+        '3': 'low'
+    }
+    
+    if quality_choice not in quality_map:
+        await update.message.reply_text("❌ اختيار غير صحيح! أرسل 1 أو 2 أو 3")
+        return QUALITY
+    
+    quality = quality_map[quality_choice]
+    context.user_data['quality'] = quality
+    
     await update.message.reply_text(
         "⏳ جاري الاتصال بفيسبوك...\n\n"
         "⚠️ تأكد من:\n"
@@ -78,12 +107,17 @@ async def get_key(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         "⏱️ انتظر 15 ثانية..."
     )
     
+    m3u8 = context.user_data['m3u8']
+    key = context.user_data['stream_key']
     rtmp = config.FACEBOOK_RTMP_URL
-    success, msg = stream_manager.start_stream(m3u8, rtmp, key, logo_path="./static/logo.png")
+    
+    success, msg = stream_manager.start_stream(m3u8, rtmp, key, logo_path="./static/logo.png", quality=quality)
     
     if success:
+        quality_text = {'high': '🔴 عالية', 'medium': '🟡 متوسطة', 'low': '🟢 منخفضة'}[quality]
         await update.message.reply_text(
             f"{msg}\n\n"
+            f"📊 جودة البث: {quality_text}\n"
             "📺 يمكنك الآن الذهاب لصفحة البث المباشر في فيسبوك.\n"
             "استخدم /stop لإيقاف البث."
         )
@@ -221,6 +255,7 @@ def run_bot_main():
             states={
                 M3U8: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_m3u8)],
                 KEY: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_key)],
+                QUALITY: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_quality)],
             },
             fallbacks=[CommandHandler("cancel", cancel)],
         )
