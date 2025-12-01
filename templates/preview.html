@@ -88,7 +88,8 @@
             .then(data => {
                 offsetXInput.value = data.offset_x.replace(/['"]/g, '');
                 offsetYInput.value = data.offset_y.replace(/['"]/g, '');
-                sizeInput.value = 150;
+                sizeInput.value = data.size || 150;
+                opacityInput.value = (data.opacity || 1.0) * 100;
                 update();
             })
             .catch(() => update());
@@ -100,8 +101,9 @@
             const opacity = parseInt(opacityInput.value) / 100;
             
             logo.style.width = size + 'px';
-            logo.style.right = (-x) + 'px';
-            logo.style.top = y + 'px';
+            logo.style.right = x + 'px';
+            logo.style.top = Math.max(0, y) + 'px';
+            logo.style.bottom = (y < 0 ? Math.abs(y) : 'auto') + (y < 0 ? 'px' : '');
             logo.style.opacity = opacity;
             
             document.getElementById('valueX').textContent = x + 'px';

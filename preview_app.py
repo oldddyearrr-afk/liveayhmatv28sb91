@@ -20,11 +20,29 @@ class PreviewHandler(http.server.SimpleHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
+            size_value = 150
+            if isinstance(config.LOGO_SIZE, str) and ':' in config.LOGO_SIZE:
+                try:
+                    size_value = int(config.LOGO_SIZE.split(':')[0])
+                except:
+                    pass
+            else:
+                try:
+                    size_value = int(config.LOGO_SIZE)
+                except:
+                    pass
+            
+            opacity_value = 1.0
+            try:
+                opacity_value = float(config.LOGO_OPACITY)
+            except:
+                pass
+            
             data = {
                 'offset_x': config.LOGO_OFFSET_X,
                 'offset_y': config.LOGO_OFFSET_Y,
-                'size': config.LOGO_SIZE,
-                'opacity': config.LOGO_OPACITY
+                'size': size_value,
+                'opacity': opacity_value
             }
             self.wfile.write(json.dumps(data).encode('utf-8'))
         elif self.path.startswith('/static/'):
