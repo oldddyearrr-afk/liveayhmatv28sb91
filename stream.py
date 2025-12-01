@@ -30,7 +30,7 @@ class StreamManager:
 foreground = yes
 [fb-live]
 client = yes
-accept = 127.0.0.1:19350
+accept = 0.0.0.0:19350
 connect = live-api-s.facebook.com:443
 verifyChain = no
 """

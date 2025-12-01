@@ -1,0 +1,12 @@
+
+services:
+  - type: web
+    name: telegram-stream-bot
+    env: docker
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: PYTHONUNBUFFERED
+        value: "1"
