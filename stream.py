@@ -113,10 +113,17 @@ verifyChain = no
         
         if logo_path and os.path.exists(logo_path):
             command.extend(['-i', logo_path])
-            x_offset = config.LOGO_OFFSET_X
-            y_offset = config.LOGO_OFFSET_Y
+            x_offset = int(str(config.LOGO_OFFSET_X).strip().strip('"').strip("'"))
+            y_offset = int(str(config.LOGO_OFFSET_Y).strip().strip('"').strip("'"))
             logo_size = config.LOGO_SIZE
-            overlay_pos = f"main_w-overlay_w{x_offset}:{y_offset}"
+            
+            x_pos = f"main_w-overlay_w+{x_offset}"
+            if y_offset < 0:
+                y_pos = f"h-overlay_h{y_offset}"
+            else:
+                y_pos = str(y_offset)
+            
+            overlay_pos = f"{x_pos}:{y_pos}"
             command.extend([
                 '-filter_complex', f'[1:v]format=rgba,scale={logo_size}[logo];[0:v][logo]overlay={overlay_pos}[outv]',
                 '-map', '[outv]',
