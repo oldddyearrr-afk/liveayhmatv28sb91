@@ -85,6 +85,18 @@ verifyChain = no
         is_ts_stream = '.ts' in m3u8_url or 'mpegts' in m3u8_url.lower() or ('?' in m3u8_url and 'm3u8' not in m3u8_url.lower())
         is_periscope = 'pscp.tv' in m3u8_url or 'periscope' in m3u8_url.lower()
         
+        # تحويل رابط الجودة المحددة إلى master playlist للاستقرار الأفضل
+        if is_periscope and 'transcode/' in m3u8_url and 'dynamic_highlatency.m3u8' in m3u8_url:
+            # تحويل من: .../transcode/.../dynamic_highlatency.m3u8
+            # إلى: .../non_transcode/.../master_dynamic_highlatency.m3u8
+            master_url = m3u8_url.replace('/transcode/', '/non_transcode/').replace('dynamic_highlatency.m3u8', 'master_dynamic_highlatency.m3u8')
+            # إزالة المنفذ 443 لأنه غير ضروري في master
+            master_url = master_url.replace(':443/', '/')
+            logger.info(f"🔄 تحويل من جودة محددة إلى Master playlist للاستقرار")
+            logger.info(f"📡 URL الأصلي: {m3u8_url[:80]}...")
+            logger.info(f"📡 Master URL: {master_url[:80]}...")
+            m3u8_url = master_url
+        
         command = [
             config.FFMPEG_CMD,
             '-hide_banner',
