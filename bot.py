@@ -37,12 +37,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 async def start_stream_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """أمر بدء البث"""
-    if stream_manager.process and stream_manager.process.poll() is None:
+    if stream_manager.is_running:
         await update.message.reply_text("⚠️ البث يعمل بالفعل! استخدم /stop لإيقافه أولاً.")
         return ConversationHandler.END
     
     stream_manager.is_running = False
-    stream_manager.process = None
 
     await update.message.reply_text(
         "🚀 إعداد البث\n\n"
@@ -116,15 +115,8 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 async def reset_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """إعادة تعيين حالة البوت بالكامل"""
+    stream_manager.stop_stream()
     stream_manager.is_running = False
-    if stream_manager.process:
-        try:
-            if stream_manager.process.poll() is None:
-                stream_manager.process.kill()
-        except:
-            pass
-    stream_manager.process = None
-    stream_manager.reconnect_attempts = 0
     
     await update.message.reply_text(
         "🔄 تم إعادة تعيين البوت بالكامل!\n\n"

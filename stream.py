@@ -17,6 +17,7 @@ class StreamManager:
         self.is_running = False
         self.anti_detect = AntiDetection()
         self.stop_event = threading.Event()
+        self.process = None  # للتوافقية مع bot.py
 
     def execute_tmux_cmd(self, cmd_list):
         """Execute shell command via tmux safely"""
