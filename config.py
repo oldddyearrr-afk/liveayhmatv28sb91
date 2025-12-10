@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-BOT_TOKEN = os.getenv("BOT_TOKEN", "8476070935:AAHADgmTDVTErkm25hVUt4dWjf6g37sZKEM")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "8001928461:AAFH6AXUsWb5BSvRvxT3OZRy9x-TmT7IGKY")
 FACEBOOK_RTMP_URL = "rtmps://live-api-s.facebook.com:443/rtmp/"
 
 LOGO_ENABLED = True
