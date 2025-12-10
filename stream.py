@@ -1,274 +1,252 @@
-import subprocess
-import logging
-import config
-import os
-import time
-import threading
-import random
-import requests
-from urllib.parse import urljoin, urlparse
-from anti_detection import AntiDetection
 
+import subprocess
+import time
+import logging
+import requests
+import re
+import config
+from anti_detection import AntiDetection
+import threading
+
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class StreamManager:
     def __init__(self):
-        self.process = None
         self.is_running = False
-        self.anti_detect = AntiDetection()
+        self.process = None
+        self.session_name = "fbstream"
         self.monitor_thread = None
-        self.current_source_type = None
 
-    def detect_source_type(self, url):
-        """اكتشاف نوع المصدر"""
-        url_lower = url.lower()
-        
-        if 'pscp.tv' in url_lower or 'periscope' in url_lower:
-            return 'periscope'
-        if 'token=' in url_lower or url_lower.endswith('.ts'):
-            return 'ts_direct'
-        if any(x in url_lower for x in ['alkass', 'bein', 'ssc', 'shahid', 'mbc']):
-            return 'sports'
-        return 'hls'
-
-    def build_ffmpeg_command(self, source_url, stream_key):
-        """بناء أمر FFmpeg محسّن للاتصال المستقر"""
-        rtmp_url = f"rtmps://live-api-s.facebook.com:443/rtmp/{stream_key}"
-        source_type = self.detect_source_type(source_url)
-        self.current_source_type = source_type
-        
-        logger.info(f"📡 النوع: {source_type}")
-        
-        # تحسين رابط Periscope
-        if source_type == 'periscope' and 'transcode/' in source_url:
-            source_url = source_url.replace('/transcode/', '/non_transcode/')
-            source_url = source_url.replace('dynamic_highlatency.m3u8', 'master_dynamic_highlatency.m3u8')
-            source_url = source_url.replace(':443/', '/')
-        
-        command = ['ffmpeg', '-hide_banner', '-loglevel', 'info', '-y']
-        
-        # إعدادات الإدخال المحسّنة
-        command.extend([
-            '-multiple_requests', '1',
-            '-reconnect', '1',
-            '-reconnect_streamed', '1',
-            '-reconnect_at_eof', '1',
-            '-reconnect_on_network_error', '1',
-            '-reconnect_on_http_error', '4xx,5xx',
-            '-reconnect_delay_max', '10',
-            '-timeout', '10000000',
-            '-rw_timeout', '10000000',
-            '-analyzeduration', '5000000',
-            '-probesize', '5000000',
-            '-fflags', '+genpts+discardcorrupt+igndts',
-            '-protocol_whitelist', 'file,http,https,tcp,tls,crypto,hls,httpproxy',
-            '-user_agent', self.anti_detect.get_random_user_agent(),
-            '-headers', 'Accept-Language: ar,en-US;q=0.9\r\nCache-Control: no-cache\r\n',
-            '-i', source_url,
-        ])
-        
-        # إعدادات الترميز المستقرة
-        command.extend([
-            '-c:v', 'libx264',
-            '-preset', 'veryfast',
-            '-tune', 'zerolatency',
-            '-profile:v', 'main',
-            '-level', '4.1',
-            '-pix_fmt', 'yuv420p',
-            '-b:v', '3500k',
-            '-maxrate', '4000k',
-            '-bufsize', '7000k',
-            '-g', '50',
-            '-keyint_min', '25',
-            '-sc_threshold', '0',
-            '-c:a', 'aac',
-            '-b:a', '128k',
-            '-ar', '44100',
-            '-ac', '2',
-            '-strict', '-2',
-        ])
-        
-        # إعدادات الإخراج لـ Facebook
-        command.extend([
-            '-f', 'flv',
-            '-flvflags', 'no_duration_filesize+no_metadata',
-            '-flush_packets', '1',
-            '-max_interleave_delta', '0',
-            '-fflags', '+nobuffer+flush_packets',
-            rtmp_url
-        ])
-        
-        return command
-
-    def start_stream(self, source_url, stream_key):
-        """بدء البث"""
-        if self.process and self.process.poll() is None:
-            return False, "⚠️ البث يعمل بالفعل!"
-        
-        self.is_running = False
-        self.process = None
-        
-        logger.info("🔐 جاري الاتصال...")
-        time.sleep(random.uniform(1, 2))
-        
-        command = self.build_ffmpeg_command(source_url, stream_key)
-        logger.info(f"📺 بدء البث...")
-        
+    def parse_m3u8_for_best_quality(self, url):
+        """اختيار أفضل جودة من M3U8"""
         try:
-            self.process = subprocess.Popen(
-                command,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                bufsize=1
+            headers = AntiDetection.obfuscate_stream_headers()
+            resp = requests.get(url, headers=headers, timeout=10)
+            
+            if not resp.ok:
+                logger.warning(f"⚠️ فشل تحميل M3U8: {resp.status_code}")
+                return url
+            
+            content = resp.text
+            qualities = []
+            
+            for line in content.split('\n'):
+                if line.startswith('#EXT-X-STREAM-INF'):
+                    match = re.search(r'BANDWIDTH=(\d+)', line)
+                    if match:
+                        bandwidth = int(match.group(1))
+                        qualities.append((bandwidth, line))
+            
+            if qualities:
+                qualities.sort(reverse=True)
+                best_line = qualities[0][1]
+                
+                next_idx = content.split('\n').index(best_line) + 1
+                lines = content.split('\n')
+                if next_idx < len(lines):
+                    best_url = lines[next_idx].strip()
+                    if not best_url.startswith('http'):
+                        base = url.rsplit('/', 1)[0]
+                        best_url = f"{base}/{best_url}"
+                    logger.info(f"✅ اختيار أفضل جودة: {qualities[0][0]} bps")
+                    return best_url
+            
+            logger.info("📌 استخدام الرابط الأصلي")
+            return url
+            
+        except Exception as e:
+            logger.warning(f"⚠️ خطأ في تحليل M3U8: {e}")
+            return url
+
+    def get_tmux_session_exists(self):
+        """التحقق من وجود جلسة tmux"""
+        try:
+            result = subprocess.run(
+                ["tmux", "has-session", "-t", self.session_name],
+                capture_output=True,
+                timeout=5
             )
+            return result.returncode == 0
+        except:
+            return False
+
+    def kill_existing_session(self):
+        """إيقاف الجلسة الموجودة"""
+        try:
+            if self.get_tmux_session_exists():
+                subprocess.run(
+                    ["tmux", "kill-session", "-t", self.session_name],
+                    timeout=5
+                )
+                time.sleep(1)
+                logger.info("🔄 تم إيقاف الجلسة القديمة")
+        except Exception as e:
+            logger.error(f"خطأ في إيقاف الجلسة: {e}")
+
+    def start_stream(self, m3u8_url, stream_key):
+        """بدء البث مع إعدادات محسّنة"""
+        try:
+            if self.is_running:
+                return False, "⚠️ البث يعمل بالفعل!"
             
-            logger.info(f"✅ FFmpeg بدأ (PID: {self.process.pid})")
+            self.kill_existing_session()
             
-            # انتظار 3 ثوانٍ للتحقق من الاتصال الأولي
+            rtmp_url = f"{config.FACEBOOK_RTMP_URL}{stream_key}"
+            
+            # أوامر FFmpeg محسّنة لفيسبوك
+            cmd = [
+                "ffmpeg",
+                "-loglevel", "warning",
+                "-stats",
+                
+                # إعدادات الإدخال - إعادة اتصال قوية
+                "-reconnect", "1",
+                "-reconnect_streamed", "1",
+                "-reconnect_delay_max", "10",
+                "-multiple_requests", "1",
+                "-timeout", "10000000",
+                "-rw_timeout", "10000000",
+                
+                # تحليل سريع
+                "-analyzeduration", "3000000",
+                "-probesize", "3000000",
+                
+                # User agent عشوائي
+                "-user_agent", AntiDetection.get_random_user_agent(),
+                
+                # المصدر
+                "-i", m3u8_url,
+                
+                # ترميز الفيديو - إعدادات مستقرة لفيسبوك
+                "-c:v", "libx264",
+                "-preset", "veryfast",
+                "-tune", "zerolatency",
+                
+                # معدل الإطارات ثابت (مهم جداً لفيسبوك)
+                "-r", "30",
+                "-g", "60",  # keyframe كل ثانيتين
+                "-keyint_min", "60",
+                "-sc_threshold", "0",  # تعطيل scene change detection
+                
+                # معدل البت
+                "-b:v", "4500k",
+                "-maxrate", "5000k",
+                "-bufsize", "10000k",
+                
+                # البكسل
+                "-pix_fmt", "yuv420p",
+                "-profile:v", "high",
+                "-level", "4.1",
+                
+                # الصوت
+                "-c:a", "aac",
+                "-b:a", "128k",
+                "-ar", "44100",
+                "-ac", "2",
+                
+                # مزامنة الصوت والفيديو
+                "-async", "1",
+                "-vsync", "cfr",  # constant framerate
+                
+                # إعدادات الإخراج لفيسبوك
+                "-f", "flv",
+                "-flvflags", "no_duration_filesize+no_metadata",
+                "-strict", "experimental",
+                
+                rtmp_url
+            ]
+            
+            # إضافة اللوجو إذا كان مفعلاً
+            if config.LOGO_ENABLED:
+                logo_filter = (
+                    f"movie={config.LOGO_PATH}:loop=0,setpts=N/(FRAME_RATE*TB),"
+                    f"scale={config.LOGO_SIZE},format=rgba,colorchannelmixer=aa={config.LOGO_OPACITY}"
+                    f"[logo];[0:v][logo]overlay={config.LOGO_OFFSET_X}:{config.LOGO_OFFSET_Y}"
+                )
+                video_idx = cmd.index("-i") + 2
+                cmd.insert(video_idx, "-vf")
+                cmd.insert(video_idx + 1, logo_filter)
+            
+            # إنشاء أمر tmux
+            ffmpeg_cmd = " ".join([f'"{arg}"' if " " in str(arg) else str(arg) for arg in cmd])
+            tmux_cmd = [
+                "tmux", "new-session", "-d", "-s", self.session_name,
+                f"{ffmpeg_cmd} 2>&1 | tee /tmp/fbstream_$(date +%s).log"
+            ]
+            
+            logger.info("🚀 بدء البث...")
+            subprocess.run(tmux_cmd, timeout=10)
+            
+            # التحقق من الاتصال بعد 3 ثواني
             time.sleep(3)
+            if not self.get_tmux_session_exists():
+                return False, "❌ فشل بدء البث!\n\nتحقق من:\n- صحة الرابط\n- صحة Stream Key"
             
-            if self.process.poll() is not None:
-                try:
-                    stdout, _ = self.process.communicate(timeout=2)
-                    logger.error(f"FFmpeg خرج مبكراً:\n{stdout}")
-                except:
-                    pass
-                self.process = None
-                return False, "❌ فشل الاتصال الأولي!\n\nتحقق من Stream Key والمصدر."
-            
-            # انتظار إضافي للتأكد من استقرار الاتصال
-            logger.info("⏳ التحقق من استقرار الاتصال...")
+            # التحقق من الاستقرار بعد 10 ثواني
             time.sleep(7)
-            
-            if self.process.poll() is not None:
-                try:
-                    stdout, _ = self.process.communicate(timeout=2)
-                    logger.error(f"FFmpeg انقطع:\n{stdout}")
-                except:
-                    pass
-                return False, "❌ الاتصال غير مستقر!\n\nقد يكون المصدر ضعيفاً أو Stream Key خاطئ."
+            if not self.get_tmux_session_exists():
+                return False, "❌ البث توقف بعد البدء!\n\nالأسباب المحتملة:\n- Stream Key منتهي\n- مشكلة في المصدر"
             
             self.is_running = True
+            self.process = True
+            
+            # بدء المراقبة
             self.monitor_thread = threading.Thread(target=self._monitor, daemon=True)
             self.monitor_thread.start()
             
             logger.info("✅ البث مستقر!")
-            return True, "✅ البث يعمل ومستقر!\n\n📺 افتح فيسبوك الآن\n⏱️ ستراه خلال 10-15 ثانية\n\n💡 نصيحة: لا تغلق الصفحة حتى يظهر الفيديو\n\n/stop لإيقاف البث"
+            return True, "✅ البث يعمل!\n\n📺 افتح فيسبوك الآن\n⏱️ ستراه خلال ثوانٍ\n\n/stop لإيقاف البث"
             
         except Exception as e:
             logger.error(f"❌ خطأ: {e}")
             self.process = None
             return False, f"❌ خطأ: {str(e)}"
 
-    def get_error_message(self, stderr):
-        """ترجمة رسائل الخطأ"""
-        if not stderr:
-            return "❌ فشل البث!"
-        
-        s = stderr.lower()
-        if "connection refused" in s:
-            return "❌ Stream Key خطأ!\n\nتأكد من المفتاح صحيح."
-        if "403" in stderr or "forbidden" in s:
-            return "❌ الرابط محمي أو منتهي!"
-        if "404" in stderr:
-            return "❌ الرابط غير موجود!"
-        if "timeout" in s:
-            return "❌ انتهت المهلة!\n\nتحقق من الإنترنت."
-        return "❌ فشل البث!\n\nتأكد من الرابط."
-
-    def _monitor(self):
-        """مراقبة البث مع محاولة إعادة الاتصال"""
-        failures = 0
-        while self.is_running and self.process:
-            if self.process.poll() is not None:
-                failures += 1
-                logger.warning(f"⚠️ البث انقطع (محاولة {failures}/3)")
-                
-                if failures >= 3:
-                    logger.error("❌ البث توقف نهائياً")
-                    self.is_running = False
-                    break
-                
-                # محاولة قراءة السبب
-                try:
-                    output = self.process.stdout.read() if self.process.stdout else ""
-                    if output:
-                        logger.error(f"آخر رسالة من FFmpeg: {output[-500:]}")
-                except:
-                    pass
-                
-                self.is_running = False
-                break
-            
-            time.sleep(10)
-
     def stop_stream(self):
         """إيقاف البث"""
-        self.is_running = False
-        if self.process and self.process.poll() is None:
-            try:
-                self.process.terminate()
-                self.process.wait(timeout=3)
-            except:
-                try:
-                    self.process.kill()
-                except:
-                    pass
+        try:
+            if not self.is_running:
+                return False, "⚠️ لا يوجد بث نشط."
+            
+            self.kill_existing_session()
+            self.is_running = False
             self.process = None
-        return True, "✅ تم إيقاف البث."
-
-    def get_status(self):
-        """حالة البث"""
-        if self.process and self.process.poll() is None:
-            return {'active': True}
-        self.is_running = False
-        return {'active': False}
+            
+            logger.info("⏹️ تم إيقاف البث")
+            return True, "⏹️ تم إيقاف البث بنجاح!"
+            
+        except Exception as e:
+            logger.error(f"خطأ في الإيقاف: {e}")
+            return False, f"❌ خطأ في الإيقاف: {str(e)}"
 
     def get_detailed_status(self):
-        """حالة مفصلة"""
-        if self.get_status()['active']:
-            return "✅ البث نشط"
-        return "❌ البث متوقف"
+        """الحصول على حالة مفصلة"""
+        if not self.is_running:
+            return "⏸️ البث متوقف"
+        
+        if self.get_tmux_session_exists():
+            return "✅ البث نشط ويعمل"
+        else:
+            self.is_running = False
+            return "❌ البث توقف بشكل غير متوقع"
 
-    def parse_m3u8_for_best_quality(self, m3u8_url):
-        """اختيار أفضل جودة من M3U8"""
-        source_type = self.detect_source_type(m3u8_url)
+    def _monitor(self):
+        """مراقبة البث"""
+        check_interval = 5
+        failures = 0
         
-        if source_type == 'ts_direct':
-            return m3u8_url
-        
-        try:
-            headers = {'User-Agent': self.anti_detect.get_random_user_agent()}
-            response = requests.get(m3u8_url, headers=headers, timeout=10, verify=False)
-            content = response.text
+        while self.is_running:
+            time.sleep(check_interval)
             
-            if '#EXT-X-STREAM-INF' not in content:
-                return m3u8_url
-            
-            bitrates = {}
-            lines = content.split('\n')
-            
-            for i, line in enumerate(lines):
-                if 'BANDWIDTH=' in line:
-                    try:
-                        bw = int(line.split('BANDWIDTH=')[1].split(',')[0])
-                        next_line = lines[i + 1].strip()
-                        if next_line and not next_line.startswith('#'):
-                            if next_line.startswith('http'):
-                                bitrates[bw] = next_line
-                            else:
-                                base = m3u8_url.rsplit('/', 1)[0]
-                                bitrates[bw] = urljoin(base + '/', next_line)
-                    except:
-                        pass
-            
-            if bitrates:
-                best = max(bitrates.keys())
-                logger.info(f"🎬 اختيار أفضل جودة: {best/1000:.0f}k")
-                return bitrates[best]
+            if not self.get_tmux_session_exists():
+                failures += 1
+                logger.warning(f"⚠️ البث انقطع (محاولة {failures})")
                 
-        except Exception as e:
-            logger.warning(f"⚠️ {e}")
-        
-        return m3u8_url
+                if failures >= 3:
+                    logger.error("❌ البث فشل بشكل متكرر")
+                    self.is_running = False
+                    break
+            else:
+                failures = 0
+                logger.info("✅ البث يعمل بشكل طبيعي")
