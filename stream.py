@@ -172,20 +172,37 @@ class StreamManager:
                 cmd.insert(video_idx, "-vf")
                 cmd.insert(video_idx + 1, logo_filter)
             
-            # إنشاء أمر tmux
+            # إنشاء أمر tmux مع حفظ اللوج
+            log_file = "/tmp/fbstream_latest.log"
             ffmpeg_cmd = " ".join([f'"{arg}"' if " " in str(arg) else str(arg) for arg in cmd])
-            tmux_cmd = [
-                "tmux", "new-session", "-d", "-s", self.session_name,
-                f"{ffmpeg_cmd} 2>&1 | tee /tmp/fbstream_$(date +%s).log"
-            ]
+            full_cmd = f"{ffmpeg_cmd} 2>&1 | tee {log_file}"
             
-            logger.info("🚀 بدء البث...")
-            subprocess.run(tmux_cmd, timeout=10)
+            logger.info(f"🚀 بدء البث...")
+            logger.info(f"📝 الأمر: {ffmpeg_cmd[:200]}...")
+            
+            # تشغيل tmux
+            result = subprocess.run(
+                ["tmux", "new-session", "-d", "-s", self.session_name, full_cmd],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            
+            if result.returncode != 0:
+                logger.error(f"❌ فشل tmux: {result.stderr}")
+                return False, f"❌ فشل بدء الجلسة: {result.stderr}"
             
             # التحقق من الاتصال بعد 3 ثواني
             time.sleep(3)
             if not self.get_tmux_session_exists():
-                return False, "❌ فشل بدء البث!\n\nتحقق من:\n- صحة الرابط\n- صحة Stream Key"
+                # قراءة اللوج لمعرفة السبب
+                try:
+                    with open(log_file, 'r') as f:
+                        error_log = f.read()[-500:]
+                    logger.error(f"❌ FFmpeg log: {error_log}")
+                except:
+                    error_log = "لا يوجد لوج"
+                return False, f"❌ فشل بدء البث!\n\n📋 اللوج:\n{error_log[:200]}"
             
             # التحقق من الاستقرار بعد 10 ثواني
             time.sleep(7)
