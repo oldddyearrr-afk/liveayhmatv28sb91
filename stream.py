@@ -32,7 +32,7 @@ class StreamManager:
         return 'hls'
 
     def build_ffmpeg_command(self, source_url, stream_key):
-        """بناء أمر FFmpeg بسيط - نفس جودة المصدر"""
+        """بناء أمر FFmpeg محسّن للاتصال المستقر"""
         rtmp_url = f"rtmps://live-api-s.facebook.com:443/rtmp/{stream_key}"
         source_type = self.detect_source_type(source_url)
         self.current_source_type = source_type
@@ -45,48 +45,56 @@ class StreamManager:
             source_url = source_url.replace('dynamic_highlatency.m3u8', 'master_dynamic_highlatency.m3u8')
             source_url = source_url.replace(':443/', '/')
         
-        command = ['ffmpeg', '-hide_banner', '-loglevel', 'warning', '-y']
+        command = ['ffmpeg', '-hide_banner', '-loglevel', 'info', '-y']
         
-        # إعدادات الإدخال
-        if source_type == 'ts_direct':
-            command.extend([
-                '-re',
-                '-timeout', '10000000',
-                '-reconnect', '1',
-                '-reconnect_streamed', '1',
-                '-reconnect_delay_max', '5',
-            ])
-        else:
-            command.extend([
-                '-reconnect', '1',
-                '-reconnect_streamed', '1',
-                '-reconnect_at_eof', '1',
-                '-reconnect_on_network_error', '1',
-                '-reconnect_on_http_error', '4xx,5xx',
-                '-reconnect_delay_max', '2',
-            ])
-        
+        # إعدادات الإدخال المحسّنة
         command.extend([
-            '-analyzeduration', '3000000',
-            '-probesize', '3000000',
-            '-fflags', '+genpts+discardcorrupt+nobuffer',
-            '-protocol_whitelist', 'file,http,https,tcp,tls,crypto,hls',
+            '-multiple_requests', '1',
+            '-reconnect', '1',
+            '-reconnect_streamed', '1',
+            '-reconnect_at_eof', '1',
+            '-reconnect_on_network_error', '1',
+            '-reconnect_on_http_error', '4xx,5xx',
+            '-reconnect_delay_max', '10',
+            '-timeout', '10000000',
+            '-rw_timeout', '10000000',
+            '-analyzeduration', '5000000',
+            '-probesize', '5000000',
+            '-fflags', '+genpts+discardcorrupt+igndts',
+            '-protocol_whitelist', 'file,http,https,tcp,tls,crypto,hls,httpproxy',
             '-user_agent', self.anti_detect.get_random_user_agent(),
+            '-headers', 'Accept-Language: ar,en-US;q=0.9\r\nCache-Control: no-cache\r\n',
             '-i', source_url,
         ])
         
-        # إعدادات الإخراج - نفس جودة المصدر
+        # إعدادات الترميز المستقرة
         command.extend([
             '-c:v', 'libx264',
-            '-preset', 'ultrafast',
+            '-preset', 'veryfast',
             '-tune', 'zerolatency',
+            '-profile:v', 'main',
+            '-level', '4.1',
             '-pix_fmt', 'yuv420p',
-            '-g', '60',
+            '-b:v', '3500k',
+            '-maxrate', '4000k',
+            '-bufsize', '7000k',
+            '-g', '50',
+            '-keyint_min', '25',
+            '-sc_threshold', '0',
             '-c:a', 'aac',
+            '-b:a', '128k',
             '-ar', '44100',
             '-ac', '2',
+            '-strict', '-2',
+        ])
+        
+        # إعدادات الإخراج لـ Facebook
+        command.extend([
             '-f', 'flv',
-            '-flvflags', 'no_duration_filesize',
+            '-flvflags', 'no_duration_filesize+no_metadata',
+            '-flush_packets', '1',
+            '-max_interleave_delta', '0',
+            '-fflags', '+nobuffer+flush_packets',
             rtmp_url
         ])
         
@@ -110,29 +118,43 @@ class StreamManager:
             self.process = subprocess.Popen(
                 command,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1
             )
             
             logger.info(f"✅ FFmpeg بدأ (PID: {self.process.pid})")
-            time.sleep(5)
+            
+            # انتظار 3 ثوانٍ للتحقق من الاتصال الأولي
+            time.sleep(3)
             
             if self.process.poll() is not None:
-                _, stderr = self.process.communicate(timeout=2)
+                try:
+                    stdout, _ = self.process.communicate(timeout=2)
+                    logger.error(f"FFmpeg خرج مبكراً:\n{stdout}")
+                except:
+                    pass
                 self.process = None
-                return False, self.get_error_message(stderr)
+                return False, "❌ فشل الاتصال الأولي!\n\nتحقق من Stream Key والمصدر."
             
-            time.sleep(5)
+            # انتظار إضافي للتأكد من استقرار الاتصال
+            logger.info("⏳ التحقق من استقرار الاتصال...")
+            time.sleep(7)
             
             if self.process.poll() is not None:
-                _, stderr = self.process.communicate(timeout=2)
-                return False, self.get_error_message(stderr)
+                try:
+                    stdout, _ = self.process.communicate(timeout=2)
+                    logger.error(f"FFmpeg انقطع:\n{stdout}")
+                except:
+                    pass
+                return False, "❌ الاتصال غير مستقر!\n\nقد يكون المصدر ضعيفاً أو Stream Key خاطئ."
             
             self.is_running = True
             self.monitor_thread = threading.Thread(target=self._monitor, daemon=True)
             self.monitor_thread.start()
             
-            return True, "✅ البث يعمل!\n\n📺 افتح فيسبوك الآن\n⏱️ ستراه خلال ثوانٍ\n\n/stop لإيقاف البث"
+            logger.info("✅ البث مستقر!")
+            return True, "✅ البث يعمل ومستقر!\n\n📺 افتح فيسبوك الآن\n⏱️ ستراه خلال 10-15 ثانية\n\n💡 نصيحة: لا تغلق الصفحة حتى يظهر الفيديو\n\n/stop لإيقاف البث"
             
         except Exception as e:
             logger.error(f"❌ خطأ: {e}")
@@ -156,13 +178,30 @@ class StreamManager:
         return "❌ فشل البث!\n\nتأكد من الرابط."
 
     def _monitor(self):
-        """مراقبة البث"""
+        """مراقبة البث مع محاولة إعادة الاتصال"""
+        failures = 0
         while self.is_running and self.process:
             if self.process.poll() is not None:
-                logger.warning("⚠️ البث توقف")
+                failures += 1
+                logger.warning(f"⚠️ البث انقطع (محاولة {failures}/3)")
+                
+                if failures >= 3:
+                    logger.error("❌ البث توقف نهائياً")
+                    self.is_running = False
+                    break
+                
+                # محاولة قراءة السبب
+                try:
+                    output = self.process.stdout.read() if self.process.stdout else ""
+                    if output:
+                        logger.error(f"آخر رسالة من FFmpeg: {output[-500:]}")
+                except:
+                    pass
+                
                 self.is_running = False
                 break
-            time.sleep(5)
+            
+            time.sleep(10)
 
     def stop_stream(self):
         """إيقاف البث"""
