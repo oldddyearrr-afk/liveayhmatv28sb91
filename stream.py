@@ -195,16 +195,21 @@ class StreamManager:
             
             cmd = self.build_ffmpeg_command(m3u8_url, stream_key)
             
-            ffmpeg_cmd_str = " ".join([
-                f"'{arg}'" if " " in str(arg) or "(" in str(arg) or ")" in str(arg) else str(arg) 
-                for arg in cmd
-            ])
+            def escape_arg(arg):
+                arg_str = str(arg)
+                special_chars = [' ', '(', ')', '[', ']', ';', ':', '=', ',']
+                if any(c in arg_str for c in special_chars):
+                    escaped = arg_str.replace("'", "'\"'\"'")
+                    return f"'{escaped}'"
+                return arg_str
+            
+            ffmpeg_cmd_str = " ".join([escape_arg(arg) for arg in cmd])
             
             shell_cmd = f"{ffmpeg_cmd_str} 2>&1 | tee {self.log_file}"
             
             tmux_cmd = [
                 "tmux", "new-session", "-d", "-s", self.session_name,
-                "bash", "-lc", shell_cmd
+                "bash", "-c", shell_cmd
             ]
             
             logger.info("🚀 بدء البث...")
