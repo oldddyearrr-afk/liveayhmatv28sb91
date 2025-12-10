@@ -94,23 +94,27 @@ class StreamManager:
             
             rtmp_url = f"{config.FACEBOOK_RTMP_URL}{stream_key}"
             
-            # أوامر FFmpeg محسّنة لفيسبوك
+            # أوامر FFmpeg محسّنة لفيسبوك - مع إصلاح مشكلة الانقطاع
             cmd = [
                 "ffmpeg",
                 "-loglevel", "warning",
                 "-stats",
                 
+                # ⭐ مهم جداً: قراءة المصدر بسرعته الطبيعية (يمنع الإرسال السريع)
+                "-re",
+                
                 # إعدادات الإدخال - إعادة اتصال قوية
                 "-reconnect", "1",
                 "-reconnect_streamed", "1",
                 "-reconnect_delay_max", "10",
+                "-reconnect_at_eof", "1",
                 "-multiple_requests", "1",
                 "-timeout", "10000000",
                 "-rw_timeout", "10000000",
                 
                 # تحليل سريع
-                "-analyzeduration", "3000000",
-                "-probesize", "3000000",
+                "-analyzeduration", "5000000",
+                "-probesize", "5000000",
                 
                 # User agent عشوائي
                 "-user_agent", AntiDetection.get_random_user_agent(),
@@ -125,14 +129,15 @@ class StreamManager:
                 
                 # معدل الإطارات ثابت (مهم جداً لفيسبوك)
                 "-r", "30",
-                "-g", "60",  # keyframe كل ثانيتين
+                "-g", "60",
                 "-keyint_min", "60",
-                "-sc_threshold", "0",  # تعطيل scene change detection
+                "-sc_threshold", "0",
+                "-force_key_frames", "expr:gte(t,n_forced*2)",
                 
-                # معدل البت
-                "-b:v", "4500k",
-                "-maxrate", "5000k",
-                "-bufsize", "10000k",
+                # معدل البت - مخفض قليلاً للاستقرار
+                "-b:v", "3500k",
+                "-maxrate", "4000k",
+                "-bufsize", "8000k",
                 
                 # البكسل
                 "-pix_fmt", "yuv420p",
@@ -147,12 +152,11 @@ class StreamManager:
                 
                 # مزامنة الصوت والفيديو
                 "-async", "1",
-                "-vsync", "cfr",  # constant framerate
+                "-vsync", "cfr",
                 
                 # إعدادات الإخراج لفيسبوك
                 "-f", "flv",
-                "-flvflags", "no_duration_filesize+no_metadata",
-                "-strict", "experimental",
+                "-flvflags", "no_duration_filesize",
                 
                 rtmp_url
             ]
