@@ -49,13 +49,15 @@ class StreamManager:
             logger.error(f"خطأ في إيقاف الجلسة: {e}")
 
     def build_ffmpeg_command(self, m3u8_url, stream_key):
-        """بناء أمر FFmpeg المحسّن"""
+        """بناء أمر FFmpeg المحسّن لضمان 30fps و 3.5Mbps"""
         rtmp_url = f"{config.FACEBOOK_RTMP_URL}{stream_key}"
         user_agent = AntiDetection.get_random_user_agent()
         
         cmd = ["ffmpeg", "-y"]
         
         cmd.extend(["-loglevel", "warning", "-stats"])
+        
+        cmd.extend(["-fflags", "+genpts"])
         
         cmd.append("-re")
         
@@ -77,28 +79,23 @@ class StreamManager:
         
         cmd.extend(["-i", m3u8_url])
         
+        ox = config.LOGO_OFFSET_X
+        oy = config.LOGO_OFFSET_Y
+        ox_str = f"W-w{abs(ox)}" if ox < 0 else str(ox)
+        oy_str = f"H-h{abs(oy)}" if oy < 0 else str(oy)
+        
         if config.LOGO_ENABLED and os.path.exists(config.LOGO_PATH):
             cmd.extend(["-i", config.LOGO_PATH])
             
-            ox = config.LOGO_OFFSET_X
-            oy = config.LOGO_OFFSET_Y
-            
-            if ox < 0:
-                ox_str = f"W-w{ox}"
-            else:
-                ox_str = str(ox)
-            
-            if oy < 0:
-                oy_str = f"H-h{oy}"
-            else:
-                oy_str = str(oy)
-            
             filter_complex = (
+                f"[0:v]fps=30[base];"
                 f"[1:v]scale={config.LOGO_SIZE},format=rgba,"
                 f"colorchannelmixer=aa={config.LOGO_OPACITY}[logo];"
-                f"[0:v][logo]overlay={ox_str}:{oy_str}:format=auto"
+                f"[base][logo]overlay={ox_str}:{oy_str}:format=auto"
             )
             cmd.extend(["-filter_complex", filter_complex])
+        else:
+            cmd.extend(["-vf", "fps=30"])
         
         cmd.extend([
             "-c:v", "libx264",
@@ -116,8 +113,9 @@ class StreamManager:
         
         cmd.extend([
             "-b:v", "3500k",
-            "-maxrate", "4000k",
-            "-bufsize", "8000k",
+            "-minrate", "3200k",
+            "-maxrate", "3800k",
+            "-bufsize", "7000k",
         ])
         
         cmd.extend([
