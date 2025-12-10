@@ -22,9 +22,10 @@ class StreamManager:
     def parse_m3u8_for_best_quality(self, url):
         """اختيار أفضل جودة من M3U8"""
         try:
+            logger.info(f"🔍 جاري تحليل الرابط...")
             headers = AntiDetection.obfuscate_stream_headers()
             headers['User-Agent'] = AntiDetection.get_random_user_agent()
-            resp = requests.get(url, headers=headers, timeout=15)
+            resp = requests.get(url, headers=headers, timeout=30, verify=False)
             
             if not resp.ok:
                 logger.warning(f"⚠️ فشل تحميل M3U8: {resp.status_code}")
