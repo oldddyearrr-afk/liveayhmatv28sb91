@@ -1,8 +1,6 @@
 import subprocess
 import time
 import logging
-import requests
-import re
 import os
 import config
 from anti_detection import AntiDetection
@@ -20,47 +18,9 @@ class StreamManager:
         self.log_file = "/tmp/fbstream_latest.log"
 
     def parse_m3u8_for_best_quality(self, url):
-        """اختيار أفضل جودة من M3U8"""
-        try:
-            logger.info(f"🔍 جاري تحليل الرابط...")
-            headers = AntiDetection.obfuscate_stream_headers()
-            headers['User-Agent'] = AntiDetection.get_random_user_agent()
-            resp = requests.get(url, headers=headers, timeout=30, verify=False)
-            
-            if not resp.ok:
-                logger.warning(f"⚠️ فشل تحميل M3U8: {resp.status_code}")
-                return url
-            
-            content = resp.text
-            qualities = []
-            
-            for line in content.split('\n'):
-                if line.startswith('#EXT-X-STREAM-INF'):
-                    match = re.search(r'BANDWIDTH=(\d+)', line)
-                    if match:
-                        bandwidth = int(match.group(1))
-                        qualities.append((bandwidth, line))
-            
-            if qualities:
-                qualities.sort(reverse=True)
-                best_line = qualities[0][1]
-                
-                next_idx = content.split('\n').index(best_line) + 1
-                lines = content.split('\n')
-                if next_idx < len(lines):
-                    best_url = lines[next_idx].strip()
-                    if not best_url.startswith('http'):
-                        base = url.rsplit('/', 1)[0]
-                        best_url = f"{base}/{best_url}"
-                    logger.info(f"✅ اختيار أفضل جودة: {qualities[0][0]} bps")
-                    return best_url
-            
-            logger.info("📌 استخدام الرابط الأصلي")
-            return url
-            
-        except Exception as e:
-            logger.warning(f"⚠️ خطأ في تحليل M3U8: {e}")
-            return url
+        """استخدام الرابط مباشرة - FFmpeg سيتعامل معه"""
+        logger.info("📌 استخدام الرابط مباشرة")
+        return url.strip()
 
     def get_tmux_session_exists(self):
         """التحقق من وجود جلسة tmux"""
