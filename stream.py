@@ -57,7 +57,7 @@ class StreamManager:
         
         cmd.extend(["-loglevel", "warning", "-stats"])
         
-        cmd.extend(["-fflags", "+genpts"])
+        cmd.extend(["-fflags", "+genpts+discardcorrupt"])
         
         cmd.append("-re")
         
@@ -79,23 +79,35 @@ class StreamManager:
         
         cmd.extend(["-i", m3u8_url])
         
-        ox = config.LOGO_OFFSET_X
-        oy = config.LOGO_OFFSET_Y
-        ox_str = f"W-w{abs(ox)}" if ox < 0 else str(ox)
-        oy_str = f"H-h{abs(oy)}" if oy < 0 else str(oy)
+        # تحقق من إمكانية استخدام اللوجو
+        use_logo = config.LOGO_ENABLED and os.path.exists(config.LOGO_PATH)
         
-        if config.LOGO_ENABLED and os.path.exists(config.LOGO_PATH):
-            cmd.extend(["-i", config.LOGO_PATH])
-            
-            filter_complex = (
-                f"[0:v]fps=30[base];"
-                f"[1:v]scale={config.LOGO_SIZE},format=rgba,"
-                f"colorchannelmixer=aa={config.LOGO_OPACITY}[logo];"
-                f"[base][logo]overlay={ox_str}:{oy_str}:format=auto"
-            )
-            cmd.extend(["-filter_complex", filter_complex])
-        else:
-            cmd.extend(["-vf", "fps=30"])
+        if use_logo:
+            try:
+                cmd.extend(["-i", config.LOGO_PATH])
+                
+                ox = config.LOGO_OFFSET_X
+                oy = config.LOGO_OFFSET_Y
+                ox_str = f"W-w{abs(ox)}" if ox < 0 else str(ox)
+                oy_str = f"H-h{abs(oy)}" if oy < 0 else str(oy)
+                
+                # فلتر محسّن مع معالجة أخطاء
+                filter_complex = (
+                    f"[0:v]scale=1280:720,fps=30,format=yuv420p[base];"
+                    f"[1:v]scale={config.LOGO_SIZE}:force_original_aspect_ratio=decrease,"
+                    f"format=rgba,colorchannelmixer=aa={config.LOGO_OPACITY}[logo];"
+                    f"[base][logo]overlay={ox_str}:{oy_str}:shortest=1:format=auto"
+                )
+                cmd.extend(["-filter_complex", filter_complex])
+                logger.info("✅ اللوجو مفعّل")
+            except Exception as e:
+                logger.warning(f"⚠️ تعذر إضافة اللوجو: {e}")
+                use_logo = False
+        
+        if not use_logo:
+            # بدون لوجو - فلتر بسيط ومستقر
+            cmd.extend(["-vf", "scale=1280:720,fps=30,format=yuv420p"])
+            logger.info("📺 البث بدون لوجو")
         
         cmd.extend([
             "-c:v", "libx264",
@@ -195,7 +207,8 @@ class StreamManager:
             
             if not self.get_tmux_session_exists():
                 error_msg = self._read_error_log()
-                return False, f"❌ انقطع البث!\n\n{error_msg}"
+                logger.error(f"❌ البث فشل: {error_msg}")
+                return False, f"❌ انقطع البث!\n\n{error_msg}\n\n💡 جرب:\n- تعطيل اللوجو في config.py\n- استخدام رابط M3U8 مختلف"
             
             self.is_running = True
             self.process = True
