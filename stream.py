@@ -122,21 +122,21 @@ class StreamManager:
         ])
         
         cmd.extend([
-            "-b:v", "4500k",
-            "-minrate", "4000k",
-            "-maxrate", "6000k",
-            "-bufsize", "9000k",
+            "-b:v", "4000k",
+            "-minrate", "3500k",
+            "-maxrate", "6200k",
+            "-bufsize", "8000k",
         ])
         
         cmd.extend([
             "-pix_fmt", "yuv420p",
-            "-profile:v", "high",
-            "-level", "4.1",
+            "-profile:v", "main",
+            "-level", "3.0",
         ])
         
         cmd.extend([
             "-c:a", "aac",
-            "-b:a", "128k",
+            "-b:a", "96k",
             "-ar", "44100",
             "-ac", "2",
         ])
