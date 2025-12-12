@@ -91,23 +91,21 @@ class StreamManager:
                 ox_str = f"W-w{abs(ox)}" if ox < 0 else str(ox)
                 oy_str = f"H-h{abs(oy)}" if oy < 0 else str(oy)
                 
-                # فلتر محسّن مع معالجة أخطاء
                 filter_complex = (
-                    f"[0:v]scale=1280:720,fps=30,format=yuv420p[base];"
+                    f"[0:v]scale=1920:1080,fps=30,format=yuv420p[base];"
                     f"[1:v]scale={config.LOGO_SIZE}:force_original_aspect_ratio=decrease,"
                     f"format=rgba,colorchannelmixer=aa={config.LOGO_OPACITY}[logo];"
                     f"[base][logo]overlay={ox_str}:{oy_str}:shortest=1:format=auto"
                 )
                 cmd.extend(["-filter_complex", filter_complex])
-                logger.info("✅ اللوجو مفعّل")
+                logger.info("✅ اللوجو مفعّل - 1080p")
             except Exception as e:
                 logger.warning(f"⚠️ تعذر إضافة اللوجو: {e}")
                 use_logo = False
         
         if not use_logo:
-            # بدون لوجو - فلتر بسيط ومستقر
-            cmd.extend(["-vf", "scale=1280:720,fps=30,format=yuv420p"])
-            logger.info("📺 البث بدون لوجو")
+            cmd.extend(["-vf", "scale=1920:1080,fps=30,format=yuv420p"])
+            logger.info("📺 البث بدون لوجو - 1080p")
         
         cmd.extend([
             "-c:v", "libx264",
@@ -124,10 +122,10 @@ class StreamManager:
         ])
         
         cmd.extend([
-            "-b:v", "3500k",
-            "-minrate", "3200k",
-            "-maxrate", "3800k",
-            "-bufsize", "7000k",
+            "-b:v", "4500k",
+            "-minrate", "4000k",
+            "-maxrate", "6000k",
+            "-bufsize", "9000k",
         ])
         
         cmd.extend([

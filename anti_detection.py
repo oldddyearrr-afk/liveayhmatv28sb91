@@ -48,15 +48,14 @@ class AntiDetection:
     
     @staticmethod
     def get_obfuscated_bitrate():
-        """معدل بت عشوائي لتجنب البصمة"""
-        # بدلاً من 3500k الثابت، استخدم قيماً عشوائية قريبة
-        bitrates = ['3200k', '3300k', '3400k', '3500k', '3600k', '3700k', '3800k']
+        """معدل بت عشوائي لتجنب البصمة - 1080p"""
+        bitrates = ['4200k', '4400k', '4500k', '4700k', '5000k', '5200k', '5500k']
         return random.choice(bitrates)
     
     @staticmethod
     def get_random_buffer_size():
-        """حجم التخزين المؤقت العشوائي"""
-        sizes = ['4000k', '5000k', '6000k', '7000k', '8000k']
+        """حجم التخزين المؤقت العشوائي - 1080p"""
+        sizes = ['7000k', '8000k', '9000k', '10000k', '11000k']
         return random.choice(sizes)
     
     @staticmethod
