@@ -71,8 +71,8 @@ class StreamManager:
         cmd.extend([
             "-timeout", "10000000",
             "-rw_timeout", "10000000",
-            "-analyzeduration", "5000000",
-            "-probesize", "5000000",
+            "-analyzeduration", "1000000",
+            "-probesize", "1000000",
         ])
         
         cmd.extend(["-user_agent", user_agent])
@@ -81,6 +81,9 @@ class StreamManager:
         
         # تحقق من إمكانية استخدام اللوجو
         use_logo = config.LOGO_ENABLED and os.path.exists(config.LOGO_PATH)
+        
+        res_w = config.RESOLUTION_WIDTH
+        res_h = config.RESOLUTION_HEIGHT
         
         if use_logo:
             try:
@@ -92,25 +95,26 @@ class StreamManager:
                 oy_str = f"H-h{abs(oy)}" if oy < 0 else str(oy)
                 
                 filter_complex = (
-                    f"[0:v]scale=1920:1080,fps=30,format=yuv420p[base];"
+                    f"[0:v]scale={res_w}:{res_h},fps=30,format=yuv420p[base];"
                     f"[1:v]scale={config.LOGO_SIZE}:force_original_aspect_ratio=decrease,"
                     f"format=rgba,colorchannelmixer=aa={config.LOGO_OPACITY}[logo];"
                     f"[base][logo]overlay={ox_str}:{oy_str}:shortest=1:format=auto"
                 )
                 cmd.extend(["-filter_complex", filter_complex])
-                logger.info("✅ اللوجو مفعّل - 1080p")
+                logger.info(f"✅ اللوجو مفعّل - {res_h}p")
             except Exception as e:
                 logger.warning(f"⚠️ تعذر إضافة اللوجو: {e}")
                 use_logo = False
         
         if not use_logo:
-            cmd.extend(["-vf", "scale=1920:1080,fps=30,format=yuv420p"])
-            logger.info("📺 البث بدون لوجو - 1080p")
+            cmd.extend(["-vf", f"scale={res_w}:{res_h},fps=30,format=yuv420p"])
+            logger.info(f"📺 البث بدون لوجو - {res_h}p")
         
         cmd.extend([
             "-c:v", "libx264",
-            "-preset", "veryfast",
+            "-preset", "ultrafast",
             "-tune", "zerolatency",
+            "-threads", "1",
         ])
         
         cmd.extend([
@@ -122,10 +126,10 @@ class StreamManager:
         ])
         
         cmd.extend([
-            "-b:v", "4000k",
-            "-minrate", "3500k",
-            "-maxrate", "6200k",
-            "-bufsize", "8000k",
+            "-b:v", "3500k",
+            "-minrate", "3000k",
+            "-maxrate", "4000k",
+            "-bufsize", "4000k",
         ])
         
         cmd.extend([
@@ -144,7 +148,7 @@ class StreamManager:
         cmd.extend([
             "-f", "flv",
             "-flvflags", "no_duration_filesize",
-            "-max_muxing_queue_size", "1024",
+            "-max_muxing_queue_size", "512",
         ])
         
         cmd.append(rtmp_url)
