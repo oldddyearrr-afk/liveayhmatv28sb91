@@ -136,8 +136,8 @@ class StreamManager:
         
         cmd.extend([
             "-c:a", "aac",
-            "-b:a", "96k",
-            "-ar", "44100",
+            "-b:a", "99k",
+            "-ar", "48000",
             "-ac", "2",
         ])
         
