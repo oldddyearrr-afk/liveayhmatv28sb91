@@ -1,5 +1,7 @@
 import logging
 import os
+import time
+import requests
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ConversationHandler, ContextTypes
 import config
@@ -143,12 +145,27 @@ def run_bot():
     except Exception as e:
         logger.error(f"❌ Bot error: {e}")
 
+def keep_alive():
+    """منع Render من إيقاف الخدمة - ping كل 5 دقائق"""
+    url = os.getenv('RENDER_EXTERNAL_URL', '')
+    while True:
+        time.sleep(300)
+        if url:
+            try:
+                requests.get(f"{url}/health", timeout=10)
+                logger.info("🔄 Keep-alive ping sent")
+            except:
+                pass
+
 def main():
     logger.info("🚀 Starting...")
     PORT = int(os.getenv('PORT', 8000))
     
     t = threading.Thread(target=run_server, args=(PORT,), daemon=True)
     t.start()
+    
+    ka = threading.Thread(target=keep_alive, daemon=True)
+    ka.start()
     
     run_bot()
 

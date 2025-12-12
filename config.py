@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-BOT_TOKEN = os.getenv("BOT_TOKEN", "8001928461:AAFH6AXUsWb5BSvRvxT3OZRy9x-TmT7IGKY")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "8001928461:AAGfrTiZCQx0w_AwCGuBY-HEDu7bp5HLNho")
 FACEBOOK_RTMP_URL = "rtmps://live-api-s.facebook.com:443/rtmp/"
 
 # تعطيل اللوجو مؤقتاً - غيّر إلى True عندما تريد تفعيله
